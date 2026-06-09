@@ -2,6 +2,11 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -15,7 +20,64 @@ var assets embed.FS
 //go:embed build/appicon.png
 var icon []byte
 
+func installLinux() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	targetDir := filepath.Join(home, ".local", "bin")
+	targetExe := filepath.Join(targetDir, "goexplore")
+
+	// If we are already running from the target path, do nothing.
+	if exe == targetExe {
+		return
+	}
+
+	// Ensure target directories exist
+	os.MkdirAll(targetDir, 0755)
+
+	// Copy the executable
+	data, err := os.ReadFile(exe)
+	if err == nil {
+		os.WriteFile(targetExe, data, 0755)
+	}
+
+	// Write the application icon
+	iconDir := filepath.Join(home, ".local", "share", "icons", "hicolor", "512x512", "apps")
+	os.MkdirAll(iconDir, 0755)
+	os.WriteFile(filepath.Join(iconDir, "goexplore.png"), icon, 0644)
+
+	// Write the desktop shortcut file
+	appDir := filepath.Join(home, ".local", "share", "applications")
+	os.MkdirAll(appDir, 0755)
+	desktopContent := fmt.Sprintf(`[Desktop Entry]
+Name=GoExplore
+Exec=%s
+Icon=goexplore
+Type=Application
+Terminal=false
+Categories=Utility;FileTools;`, targetExe)
+	os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
+
+	// Execute the newly installed binary and exit the current running process
+	cmd := exec.Command(targetExe)
+	cmd.Start()
+	os.Exit(0)
+}
+
 func main() {
+	installLinux()
+
 	// Create an instance of the app structure
 	app := NewApp()
 

@@ -30,8 +30,8 @@ jobs:
             cp build/bin/goexplore dist/goexplore-linux-amd64
             
             # Windows amd64
-            wails build -platform windows/amd64 -clean
-            cp build/bin/goexplore.exe dist/goexplore-windows-amd64.exe
+            wails build -platform windows/amd64 -clean -nsis
+            cp build/bin/goexplore-amd64-installer.exe dist/goexplore-windows-installer.exe
           "
 
 
@@ -44,7 +44,7 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT_URL }}
         run: |
           aws s3 cp dist/goexplore-linux-amd64 s3://apps/goexplore/goexplore-linux-amd64 --endpoint-url "$R2_ENDPOINT"
-          aws s3 cp dist/goexplore-windows-amd64.exe s3://apps/goexplore/goexplore-windows-amd64.exe --endpoint-url "$R2_ENDPOINT"
+          aws s3 cp dist/goexplore-windows-installer.exe s3://apps/goexplore/goexplore-windows-installer.exe --endpoint-url "$R2_ENDPOINT"
 
       - name: Clean up
         run: sudo rm -rf dist build/bin/*
