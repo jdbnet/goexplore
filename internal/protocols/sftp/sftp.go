@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -32,8 +33,16 @@ func (e *SFTPExplorer) Connect() error {
 	}
 	
 	var authMethod ssh.AuthMethod
-	signer, err := ssh.ParsePrivateKey([]byte(e.secret))
-	if err == nil {
+	
+	secretStr := strings.TrimSpace(e.secret)
+	// Handle case where newlines might be escaped by mistake
+	secretStr = strings.ReplaceAll(secretStr, "\\n", "\n")
+
+	if strings.Contains(secretStr, "-----BEGIN") {
+		signer, err := ssh.ParsePrivateKey([]byte(secretStr))
+		if err != nil {
+			return fmt.Errorf("failed to parse private key: %w", err)
+		}
 		authMethod = ssh.PublicKeys(signer)
 	} else {
 		authMethod = ssh.Password(e.secret)
