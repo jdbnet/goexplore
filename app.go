@@ -95,6 +95,34 @@ func (a *App) DeleteConnection(id string) error {
 	return config.SaveConfig(a.cfg)
 }
 
+func (a *App) ReorderConnections(ids []string) error {
+	var newConns []config.ConnectionConfig
+	connMap := make(map[string]config.ConnectionConfig)
+	for _, c := range a.cfg.Connections {
+		connMap[c.ID] = c
+	}
+
+	for _, id := range ids {
+		if c, ok := connMap[id]; ok {
+			newConns = append(newConns, c)
+		}
+	}
+
+	// Add any connections that might have been missed
+	added := make(map[string]bool)
+	for _, c := range newConns {
+		added[c.ID] = true
+	}
+	for _, c := range a.cfg.Connections {
+		if !added[c.ID] {
+			newConns = append(newConns, c)
+		}
+	}
+
+	a.cfg.Connections = newConns
+	return config.SaveConfig(a.cfg)
+}
+
 func (a *App) getExplorerForConnection(id string) (explorer.Explorer, error) {
 	if id == "local" {
 		return local.New(), nil
