@@ -15,6 +15,8 @@ export function GetConnections():Promise<Array<config.ConnectionConfig>>;
 
 export function GetTransfers():Promise<Array<transfer.Transfer>>;
 
+export function GetVersion():Promise<string>;
+
 export function ListDir(arg1:string,arg2:string):Promise<Array<explorer.FileEntry>>;
 
 export function MkDir(arg1:string,arg2:string):Promise<void>;

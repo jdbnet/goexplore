@@ -44,6 +44,10 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
+func (a *App) GetVersion() string {
+	return Version
+}
+
 func (a *App) GetConnections() []config.ConnectionConfig {
 	if a.cfg == nil {
 		return nil

@@ -22,6 +22,10 @@ export function GetTransfers() {
   return window['go']['main']['App']['GetTransfers']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function ListDir(arg1, arg2) {
   return window['go']['main']['App']['ListDir'](arg1, arg2);
 }

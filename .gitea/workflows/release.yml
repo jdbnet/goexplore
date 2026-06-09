@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && startsWith(github.head_ref, 'v')
+    runs-on: build-htz-01
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          # Remove 'v' prefix for some contexts if needed, but we'll use it raw
+          RAW_VERSION=${{ github.head_ref }}
+          CLEAN_VERSION=${RAW_VERSION#v}
+          echo "VERSION=${RAW_VERSION}" >> $GITHUB_OUTPUT
+          echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build Binaries
+        run: |
+          mkdir -p dist
+
+          # Build Linux amd64 and Windows amd64 binaries using custom docker image
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace cr.jdbnet.co.uk/jdbnet/wails-builder:latest bash -c "
+            # Inject version into wails.json for NSIS & executable properties
+            sed -i 's/\"productVersion\": \".*\"/\"productVersion\": \"${{ steps.get_version.outputs.CLEAN_VERSION }}\"/' wails.json
+            
+            # Install frontend dependencies
+            cd frontend && npm install && cd ..
+            
+            # Linux amd64
+            wails build -platform linux/amd64 -tags webkit2_41 -clean -ldflags \"-X main.Version=${{ steps.get_version.outputs.VERSION }}\"
+            cp build/bin/goexplore dist/goexplore-linux-amd64
+            
+            # Windows amd64
+            wails build -platform windows/amd64 -clean -nsis -ldflags \"-X main.Version=${{ steps.get_version.outputs.VERSION }}\"
+            cp build/bin/GoExplore-amd64-installer.exe dist/goexplore-windows-installer.exe
+          "
+
+      # - name: Generate Changelog
+      #   id: changelog
+      #   uses: https://github.com/metcalfc/changelog-generator@v4.6.2
+      #   with:
+      #     myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Gitea Release
+        uses: https://gitea.com/actions/gitea-release-action@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: GoExplore ${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/goexplore-linux-amd64
+            dist/goexplore-windows-installer.exe
+
+      - name: Upload to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT_URL }}
+        run: |
+          aws s3 cp dist/goexplore-linux-amd64 s3://apps/goexplore/goexplore-linux-amd64 --endpoint-url "$R2_ENDPOINT"
+          aws s3 cp dist/goexplore-windows-installer.exe s3://apps/goexplore/goexplore-windows-installer.exe --endpoint-url "$R2_ENDPOINT"
+
+      - name: Clean up
+        run: sudo rm -rf dist build/bin/*
