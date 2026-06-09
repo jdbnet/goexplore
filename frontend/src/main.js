@@ -85,6 +85,7 @@ async function loadConnections() {
                 el.addEventListener('dragstart', (e) => {
                     draggedConnId = c.id;
                     e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', c.id);
                     el.style.opacity = '0.5';
                 });
                 el.addEventListener('dragend', () => {
@@ -94,11 +95,11 @@ async function loadConnections() {
                 el.addEventListener('dragenter', (e) => {
                     e.preventDefault();
                     if (draggedConnId && draggedConnId !== c.id) {
-                        el.style.borderTop = '2px solid var(--accent)';
+                        el.style.boxShadow = 'inset 0 2px 0 var(--accent)';
                     }
                 });
                 el.addEventListener('dragleave', (e) => {
-                    el.style.borderTop = '';
+                    el.style.boxShadow = '';
                 });
                 el.addEventListener('dragover', (e) => {
                     e.preventDefault();
@@ -106,7 +107,7 @@ async function loadConnections() {
                 });
                 el.addEventListener('drop', async (e) => {
                     e.preventDefault();
-                    el.style.borderTop = '';
+                    el.style.boxShadow = '';
                     if (!draggedConnId || draggedConnId === c.id) return;
                     
                     const ids = connectionsCache.map(conn => conn.id);

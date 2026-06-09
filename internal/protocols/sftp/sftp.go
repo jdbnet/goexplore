@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 	"goexplore/internal/config"
 	"goexplore/internal/explorer"
+
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
 type SFTPExplorer struct {
@@ -31,9 +32,9 @@ func (e *SFTPExplorer) Connect() error {
 	if port == 0 {
 		port = 22
 	}
-	
+
 	var authMethods []ssh.AuthMethod
-	
+
 	secretStr := strings.TrimSpace(e.secret)
 	// Handle case where newlines might be escaped by mistake
 	secretStr = strings.ReplaceAll(secretStr, "\\n", "\n")
@@ -70,8 +71,8 @@ func (e *SFTPExplorer) Connect() error {
 	}))
 
 	config := &ssh.ClientConfig{
-		User: e.cfg.Username,
-		Auth: authMethods,
+		User:            e.cfg.Username,
+		Auth:            authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
@@ -102,9 +103,17 @@ func (e *SFTPExplorer) Disconnect() error {
 
 func (e *SFTPExplorer) ListDir(path string) ([]explorer.FileEntry, error) {
 	if path == "" {
-		path = "."
+		if e.cfg.Bucket != "" {
+			path = e.cfg.Bucket
+		} else {
+			path = "/"
+		}
+	} else if path == "." {
+		path = "/"
 	}
+
 	files, err := e.client.ReadDir(path)
+
 	if err != nil {
 		return nil, err
 	}

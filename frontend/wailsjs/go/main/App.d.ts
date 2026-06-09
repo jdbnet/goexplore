@@ -11,6 +11,8 @@ export function Delete(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteConnection(arg1:string):Promise<void>;
 
+export function DisconnectConnection(arg1:string):Promise<void>;
+
 export function GetConnections():Promise<Array<config.ConnectionConfig>>;
 
 export function GetTransfers():Promise<Array<transfer.Transfer>>;
