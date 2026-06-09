@@ -53,9 +53,10 @@ func installLinux() {
 	}
 
 	// Write the application icon
-	iconDir := filepath.Join(home, ".local", "share", "icons", "hicolor", "512x512", "apps")
+	iconDir := filepath.Join(home, ".local", "share", "icons")
 	os.MkdirAll(iconDir, 0755)
-	os.WriteFile(filepath.Join(iconDir, "goexplore.png"), icon, 0644)
+	iconPath := filepath.Join(iconDir, "goexplore.png")
+	os.WriteFile(iconPath, icon, 0644)
 
 	// Write the desktop shortcut file
 	appDir := filepath.Join(home, ".local", "share", "applications")
@@ -63,10 +64,10 @@ func installLinux() {
 	desktopContent := fmt.Sprintf(`[Desktop Entry]
 Name=GoExplore
 Exec=%s
-Icon=goexplore
+Icon=%s
 Type=Application
 Terminal=false
-Categories=Utility;FileTools;`, targetExe)
+Categories=Utility;FileTools;`, targetExe, iconPath)
 	os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
 
 	// Execute the newly installed binary and exit the current running process
@@ -83,7 +84,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "goexplore",
+		Title:  "GoExplore",
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
