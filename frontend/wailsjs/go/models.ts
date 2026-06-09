@@ -9,6 +9,7 @@ export namespace config {
 	    bucket?: string;
 	    region?: string;
 	    path_style?: boolean;
+	    secure?: boolean;
 	    username?: string;
 	    keychain_key?: string;
 	
@@ -26,6 +27,7 @@ export namespace config {
 	        this.bucket = source["bucket"];
 	        this.region = source["region"];
 	        this.path_style = source["path_style"];
+	        this.secure = source["secure"];
 	        this.username = source["username"];
 	        this.keychain_key = source["keychain_key"];
 	    }
@@ -96,6 +98,8 @@ export namespace transfer {
 	    eta_seconds: number;
 	    status: string;
 	    error?: string;
+	    verify: boolean;
+	    limit_mbps: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Transfer(source);
@@ -113,6 +117,8 @@ export namespace transfer {
 	        this.eta_seconds = source["eta_seconds"];
 	        this.status = source["status"];
 	        this.error = source["error"];
+	        this.verify = source["verify"];
+	        this.limit_mbps = source["limit_mbps"];
 	    }
 	}
 

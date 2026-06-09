@@ -27,10 +27,12 @@ export function PromptUploadDirectory(arg1:string,arg2:string):Promise<void>;
 
 export function PromptUploadFiles(arg1:string,arg2:string):Promise<void>;
 
-export function QueueTransfer(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<void>;
+export function QueueTransfer(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number,arg8:boolean,arg9:number):Promise<void>;
 
 export function Rename(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function ReorderConnections(arg1:Array<string>):Promise<void>;
+
 export function SaveConnection(arg1:config.ConnectionConfig,arg2:string):Promise<void>;
 
-export function TransferItems(arg1:string,arg2:string,arg3:string,arg4:Array<main.TransferItem>):Promise<void>;
+export function TransferItems(arg1:string,arg2:string,arg3:string,arg4:Array<main.TransferItem>,arg5:boolean,arg6:number):Promise<void>;
