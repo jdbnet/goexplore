@@ -6,6 +6,7 @@ import (
 	"goexplore/internal/config"
 	"goexplore/internal/explorer"
 	"goexplore/internal/keychain"
+	"goexplore/internal/protocols/ftp"
 	"goexplore/internal/protocols/local"
 	"goexplore/internal/protocols/nfs"
 	"goexplore/internal/protocols/s3"
@@ -123,6 +124,8 @@ func (a *App) getExplorerForConnection(id string) (explorer.Explorer, error) {
 		return webdav.New(conn, secret), nil
 	case "nfs":
 		return nfs.New(conn, secret)
+	case "ftp":
+		return ftp.New(conn, secret), nil
 	default:
 		return nil, fmt.Errorf("protocol %s not fully implemented", conn.Protocol)
 	}

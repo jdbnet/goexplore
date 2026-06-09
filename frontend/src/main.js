@@ -46,6 +46,7 @@ async function init() {
             bucket: document.getElementById('conn-bucket').value,
             region: document.getElementById('conn-region').value,
             path_style: document.getElementById('conn-pathstyle').checked,
+            secure: document.getElementById('conn-secure').checked,
             username: document.getElementById('conn-username').value
         };
         let secret = document.getElementById('conn-secret').value;
@@ -105,6 +106,7 @@ window.editConnection = (id) => {
     document.getElementById('conn-bucket').value = c.bucket || '';
     document.getElementById('conn-region').value = c.region || '';
     document.getElementById('conn-pathstyle').checked = c.path_style || false;
+    document.getElementById('conn-secure').checked = c.secure || false;
     document.getElementById('conn-username').value = c.username || '';
     document.getElementById('conn-secret').value = '';
     document.getElementById('conn-secret-key').value = '';
@@ -119,6 +121,7 @@ window.openConnModal = () => {
     document.getElementById('modal-title').innerText = "Add Connection";
     document.getElementById('conn-form').reset();
     document.getElementById('conn-id').value = uuidv4();
+    document.getElementById('conn-secure').checked = false;
     document.getElementById('conn-secret').value = '';
     document.getElementById('conn-secret-key').value = '';
     document.getElementById('conn-sftp-auth-type').value = 'password';
@@ -141,6 +144,10 @@ window.updateProtocolFields = () => {
     const showS3Specific = protocol === 's3';
     document.getElementById('region-group').style.display = showS3Specific ? 'flex' : 'none';
     document.getElementById('pathstyle-group').style.display = showS3Specific ? 'flex' : 'none';
+
+    // FTP specific fields
+    const showFTP = protocol === 'ftp';
+    document.getElementById('ftp-secure-group').style.display = showFTP ? 'flex' : 'none';
 
     // SFTP Auth Type toggle
     const authTypeSelect = document.getElementById('conn-sftp-auth-type');
