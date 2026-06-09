@@ -31,10 +31,8 @@ jobs:
             
             # Windows amd64
             wails build -platform windows/amd64 -clean -nsis
-            cp build/bin/goexplore-amd64-installer.exe dist/goexplore-windows-installer.exe
+            cp build/bin/GoExplore-amd64-installer.exe dist/goexplore-windows-installer.exe
           "
-
-
 
       - name: Upload to Cloudflare R2
         env:
