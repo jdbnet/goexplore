@@ -83,6 +83,7 @@
                     <select id="conn-protocol" onchange="updateProtocolFields()">
                         <option value="s3">S3 / S3-Compatible</option>
                         <option value="sftp">SFTP</option>
+                        <option value="ftp">FTP</option>
                         <option value="webdav">WebDAV</option>
                         <option value="smb">SMB</option>
                         <option value="nfs">NFS</option>
@@ -117,14 +118,26 @@
                     </div>
                 </div>
 
+                <div class="form-group" id="ftp-secure-group" style="display: none; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1rem;">
+                    <input type="checkbox" id="conn-secure" style="width: auto;">
+                    <label style="margin: 0;">Use FTPS (Secure Explicit TLS)</label>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group" style="flex: 1;">
                         <label>Username / Access Key</label>
                         <input type="text" id="conn-username" placeholder="user">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Password / Secret Key</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label id="secret-label">Password / Secret Key</label>
+                            <select id="conn-sftp-auth-type" style="display: none; width: auto; font-size: 0.75rem; padding: 0.1rem 0.3rem;" onchange="updateProtocolFields()">
+                                <option value="password">Password</option>
+                                <option value="key">Private Key</option>
+                            </select>
+                        </div>
                         <input type="password" id="conn-secret" placeholder="Stored in OS Keychain">
+                        <textarea id="conn-secret-key" style="display: none; width: 100%; box-sizing: border-box; background: var(--bg-alt); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem; font-family: monospace;" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."></textarea>
                     </div>
                 </div>
 
@@ -163,6 +176,21 @@
                     <tbody id="transfer-dest-list"></tbody>
                 </table>
             </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1rem;">
+                <input type="checkbox" id="transfer-verify" style="width: auto;">
+                <label style="margin: 0; display: flex; flex-direction: column;">
+                    Verify Checksum (MD5)
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">Slower for non-S3 destinations as it requires re-reading the file over the network.</span>
+                </label>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1.5rem;">
+                <label style="margin: 0; width: 120px;">Max Speed (MB/s)</label>
+                <input type="number" id="transfer-limit" value="0" min="0" style="width: 80px;">
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">(0 = Unlimited)</span>
+            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button class="btn" style="background: transparent; color: var(--text-primary); border-color: var(--border);" onclick="closeTransferModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="executeTransfer()">Transfer Here</button>

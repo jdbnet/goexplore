@@ -16,6 +16,7 @@ type ConnectionConfig struct {
 	Bucket      string `yaml:"bucket,omitempty" json:"bucket,omitempty"`
 	Region      string `yaml:"region,omitempty" json:"region,omitempty"`
 	PathStyle   bool   `yaml:"path_style,omitempty" json:"path_style,omitempty"`
+	Secure      bool   `yaml:"secure,omitempty" json:"secure,omitempty"`
 	Username    string `yaml:"username,omitempty" json:"username,omitempty"`
 	KeychainKey string `yaml:"keychain_key,omitempty" json:"keychain_key,omitempty"`
 }

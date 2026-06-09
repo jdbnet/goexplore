@@ -307,3 +307,28 @@ func (e *S3Explorer) WriteFile(path string, r io.Reader, size int64) error {
 	})
 	return err
 }
+
+func (e *S3Explorer) Checksum(path string) (string, error) {
+	bucket, subpath, _, err := e.getBucketAndPath(path)
+	if err != nil {
+		return "", err
+	}
+	
+	if subpath == "" {
+		return "", fmt.Errorf("cannot calculate checksum of bucket")
+	}
+
+	input := &s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(subpath),
+	}
+	head, err := e.client.HeadObject(context.TODO(), input)
+	if err != nil {
+		return "", err
+	}
+
+	if head.ETag != nil {
+		return strings.Trim(*head.ETag, "\""), nil
+	}
+	return "", fmt.Errorf("no etag found")
+}

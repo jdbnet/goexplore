@@ -1,6 +1,8 @@
 package local
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
@@ -80,6 +82,19 @@ func (e *LocalExplorer) Delete(path string) error {
 
 func (e *LocalExplorer) Rename(src, dst string) error {
 	return os.Rename(src, dst)
+}
+
+func (e *LocalExplorer) Checksum(path string) (string, error) {
+	r, err := e.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	h := md5.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func (e *LocalExplorer) ReadFile(path string) (io.ReadCloser, error) {

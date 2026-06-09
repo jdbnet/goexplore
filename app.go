@@ -6,6 +6,7 @@ import (
 	"goexplore/internal/config"
 	"goexplore/internal/explorer"
 	"goexplore/internal/keychain"
+	"goexplore/internal/protocols/ftp"
 	"goexplore/internal/protocols/local"
 	"goexplore/internal/protocols/nfs"
 	"goexplore/internal/protocols/s3"
@@ -123,6 +124,8 @@ func (a *App) getExplorerForConnection(id string) (explorer.Explorer, error) {
 		return webdav.New(conn, secret), nil
 	case "nfs":
 		return nfs.New(conn, secret)
+	case "ftp":
+		return ftp.New(conn, secret), nil
 	default:
 		return nil, fmt.Errorf("protocol %s not fully implemented", conn.Protocol)
 	}
@@ -164,7 +167,7 @@ func (a *App) Delete(connId, path string) error {
 	return exp.Delete(path)
 }
 
-func (a *App) QueueTransfer(id string, srcConnId, dstConnId, srcPath, dstPath, filename string, size int64) error {
+func (a *App) QueueTransfer(id string, srcConnId, dstConnId, srcPath, dstPath, filename string, size int64, verify bool, limitMBps int) error {
 	srcExp, err := a.getExplorerForConnection(srcConnId)
 	if err != nil {
 		return err
@@ -182,7 +185,7 @@ func (a *App) QueueTransfer(id string, srcConnId, dstConnId, srcPath, dstPath, f
 		return err
 	}
 
-	return a.transferManager.QueueTransfer(id, srcPath, dstPath, filename, size, srcExp, dstExp)
+	return a.transferManager.QueueTransfer(id, srcPath, dstPath, filename, size, srcExp, dstExp, verify, limitMBps)
 }
 
 func (a *App) GetTransfers() []*transfer.Transfer {
@@ -229,7 +232,7 @@ func (a *App) PromptUploadFiles(connId, destPath string) error {
 			remotePath = destPath + fileName
 		}
 
-		a.QueueTransfer(id, "local", connId, localPath, remotePath, fileName, stat.Size())
+		a.QueueTransfer(id, "local", connId, localPath, remotePath, fileName, stat.Size(), false, 0)
 	}
 	return nil
 }
@@ -269,7 +272,7 @@ func (a *App) PromptUploadDirectory(connId, destPath string) error {
 		}
 
 		id := uuid.New().String()
-		a.QueueTransfer(id, "local", connId, path, remotePath, info.Name(), info.Size())
+		a.QueueTransfer(id, "local", connId, path, remotePath, info.Name(), info.Size(), false, 0)
 		return nil
 	})
 }
@@ -301,7 +304,7 @@ func (a *App) PromptDownload(connId, remotePath string) error {
 		size = stat.Size
 	}
 
-	return a.QueueTransfer(id, connId, "local", remotePath, localPath, fileName, size)
+	return a.QueueTransfer(id, connId, "local", remotePath, localPath, fileName, size, false, 0)
 }
 
 type TransferItem struct {
@@ -311,7 +314,7 @@ type TransferItem struct {
 	Size  int64  `json:"size"`
 }
 
-func (a *App) TransferItems(srcConnId, dstConnId, dstPath string, items []TransferItem) error {
+func (a *App) TransferItems(srcConnId, dstConnId, dstPath string, items []TransferItem, verify bool, limitMBps int) error {
 	for _, item := range items {
 		if !item.IsDir {
 			id := uuid.New().String()
@@ -325,18 +328,18 @@ func (a *App) TransferItems(srcConnId, dstConnId, dstPath string, items []Transf
 				remotePath = dstPath + item.Name
 			}
 
-			if err := a.QueueTransfer(id, srcConnId, dstConnId, item.Path, remotePath, item.Name, item.Size); err != nil {
+			if err := a.QueueTransfer(id, srcConnId, dstConnId, item.Path, remotePath, item.Name, item.Size, verify, limitMBps); err != nil {
 				return err
 			}
 		} else {
 			// Run remote walk in goroutine to not block UI
-			go a.transferRemoteDirectory(srcConnId, dstConnId, item.Path, dstPath)
+			go a.transferRemoteDirectory(srcConnId, dstConnId, item.Path, dstPath, verify, limitMBps)
 		}
 	}
 	return nil
 }
 
-func (a *App) transferRemoteDirectory(srcConnId, dstConnId, srcDirPath, dstBasePath string) {
+func (a *App) transferRemoteDirectory(srcConnId, dstConnId, srcDirPath, dstBasePath string, verify bool, limitMBps int) {
 	baseName := filepath.Base(srcDirPath)
 	
 	newDstPath := dstBasePath
@@ -357,11 +360,11 @@ func (a *App) transferRemoteDirectory(srcConnId, dstConnId, srcDirPath, dstBaseP
 
 	for _, entry := range entries {
 		if entry.IsDir {
-			a.transferRemoteDirectory(srcConnId, dstConnId, entry.Path, newDstPath)
+			a.transferRemoteDirectory(srcConnId, dstConnId, entry.Path, newDstPath, verify, limitMBps)
 		} else {
 			id := uuid.New().String()
 			itemDstPath := newDstPath + "/" + entry.Name
-			a.QueueTransfer(id, srcConnId, dstConnId, entry.Path, itemDstPath, entry.Name, entry.Size)
+			a.QueueTransfer(id, srcConnId, dstConnId, entry.Path, itemDstPath, entry.Name, entry.Size, verify, limitMBps)
 		}
 	}
 }

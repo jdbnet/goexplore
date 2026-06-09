@@ -3,6 +3,8 @@
 package nfs
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -124,4 +126,17 @@ func (e *NFSExplorer) WriteFile(path string, r io.Reader, size int64) error {
 	defer f.Close()
 	_, err = io.Copy(f, r)
 	return err
+}
+
+func (e *NFSExplorer) Checksum(path string) (string, error) {
+	r, err := e.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	h := md5.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
