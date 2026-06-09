@@ -20,7 +20,7 @@ jobs:
         run: |
           mkdir -p dist
 
-          # Build Linux amd64 and Windows (amd64 & arm64) binaries
+          # Build Linux amd64 and Windows amd64 binaries
           docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace cr.jdbnet.co.uk/jdbnet/wails-builder:latest bash -c "
             # Install frontend dependencies
             cd frontend && npm install && cd ..
@@ -32,24 +32,9 @@ jobs:
             # Windows amd64
             wails build -platform windows/amd64 -clean
             cp build/bin/goexplore.exe dist/goexplore-windows-amd64.exe
-            
-            # Windows arm64
-            wails build -platform windows/arm64 -clean
-            cp build/bin/goexplore.exe dist/goexplore-windows-arm64.exe
           "
 
-      - name: Build Linux ARM64 binary (via QEMU)
-        run: |
-          # Build Linux arm64 binaries (via QEMU)
-          docker run --rm --platform linux/arm64 -v ${{ github.workspace }}:/workspace -w /workspace cr.jdbnet.co.uk/jdbnet/wails-builder:latest bash -c "
-            # Re-install frontend dependencies for arm64 (clears out the amd64 esbuild binary)
-            rm -rf frontend/node_modules
-            cd frontend && npm install && cd ..
-            
-            # Linux arm64
-            wails build -platform linux/arm64 -tags webkit2_41 -clean
-            cp build/bin/goexplore dist/goexplore-linux-arm64
-          "
+
 
       - name: Upload to Cloudflare R2
         env:
@@ -60,8 +45,6 @@ jobs:
         run: |
           aws s3 cp dist/goexplore-linux-amd64 s3://apps/goexplore/goexplore-linux-amd64 --endpoint-url "$R2_ENDPOINT"
           aws s3 cp dist/goexplore-windows-amd64.exe s3://apps/goexplore/goexplore-windows-amd64.exe --endpoint-url "$R2_ENDPOINT"
-          aws s3 cp dist/goexplore-windows-arm64.exe s3://apps/goexplore/goexplore-windows-arm64.exe --endpoint-url "$R2_ENDPOINT"
-          aws s3 cp dist/goexplore-linux-arm64 s3://apps/goexplore/goexplore-linux-arm64 --endpoint-url "$R2_ENDPOINT"
 
       - name: Clean up
         run: sudo rm -rf dist build/bin/*
