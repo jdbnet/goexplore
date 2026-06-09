@@ -482,8 +482,19 @@ document.addEventListener('contextmenu', (e) => {
         document.getElementById('ctx-divider').style.display = 'block';
 
         menu.style.display = 'block';
-        menu.style.left = `${e.pageX}px`;
-        menu.style.top = `${e.pageY}px`;
+        
+        let left = e.pageX;
+        let top = e.pageY;
+        
+        if (left + menu.offsetWidth > window.innerWidth) {
+            left = window.innerWidth - menu.offsetWidth;
+        }
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight;
+        }
+        
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
     } else if (isBrowserPane && !e.target.closest('#transfer-dest-list')) {
         e.preventDefault();
 
@@ -494,8 +505,19 @@ document.addEventListener('contextmenu', (e) => {
         document.getElementById('ctx-divider').style.display = 'none';
 
         menu.style.display = 'block';
-        menu.style.left = `${e.pageX}px`;
-        menu.style.top = `${e.pageY}px`;
+        
+        let left = e.pageX;
+        let top = e.pageY;
+        
+        if (left + menu.offsetWidth > window.innerWidth) {
+            left = window.innerWidth - menu.offsetWidth;
+        }
+        if (top + menu.offsetHeight > window.innerHeight) {
+            top = window.innerHeight - menu.offsetHeight;
+        }
+        
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
     }
 });
 
