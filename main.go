@@ -27,6 +27,12 @@ func installLinux() {
 		return
 	}
 
+	for _, arg := range os.Args {
+		if arg == "--debug" {
+			return
+		}
+	}
+
 	exe, err := os.Executable()
 	if err != nil {
 		return

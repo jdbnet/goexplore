@@ -16,6 +16,7 @@ import (
 	"goexplore/internal/transfer"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -25,6 +26,8 @@ type App struct {
 	ctx             context.Context
 	cfg             *config.Config
 	transferManager *transfer.Manager
+	explorers       map[string]explorer.Explorer
+	explorersMu     sync.Mutex
 }
 
 func NewApp() *App {
@@ -38,6 +41,7 @@ func NewApp() *App {
 	return &App{
 		cfg:             cfg,
 		transferManager: transfer.NewManager(3),
+		explorers:       make(map[string]explorer.Explorer),
 	}
 }
 
@@ -123,6 +127,41 @@ func (a *App) ReorderConnections(ids []string) error {
 	return config.SaveConfig(a.cfg)
 }
 
+func (a *App) getConnection(id string) (explorer.Explorer, error) {
+	if id == "local" {
+		return local.New(), nil
+	}
+	
+	a.explorersMu.Lock()
+	defer a.explorersMu.Unlock()
+
+	if exp, ok := a.explorers[id]; ok {
+		return exp, nil
+	}
+
+	exp, err := a.getExplorerForConnection(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := exp.Connect(); err != nil {
+		return nil, err
+	}
+
+	a.explorers[id] = exp
+	return exp, nil
+}
+
+func (a *App) DisconnectConnection(id string) {
+	a.explorersMu.Lock()
+	defer a.explorersMu.Unlock()
+
+	if exp, ok := a.explorers[id]; ok {
+		exp.Disconnect()
+		delete(a.explorers, id)
+	}
+}
+
 func (a *App) getExplorerForConnection(id string) (explorer.Explorer, error) {
 	if id == "local" {
 		return local.New(), nil
@@ -160,38 +199,26 @@ func (a *App) getExplorerForConnection(id string) (explorer.Explorer, error) {
 }
 
 func (a *App) ListDir(connId, path string) ([]explorer.FileEntry, error) {
-	exp, err := a.getExplorerForConnection(connId)
+	exp, err := a.getConnection(connId)
 	if err != nil {
 		return nil, err
 	}
-	if err := exp.Connect(); err != nil {
-		return nil, err
-	}
-	defer exp.Disconnect()
 	return exp.ListDir(path)
 }
 
 func (a *App) MkDir(connId, path string) error {
-	exp, err := a.getExplorerForConnection(connId)
+	exp, err := a.getConnection(connId)
 	if err != nil {
 		return err
 	}
-	if err := exp.Connect(); err != nil {
-		return err
-	}
-	defer exp.Disconnect()
 	return exp.MkDir(path)
 }
 
 func (a *App) Delete(connId, path string) error {
-	exp, err := a.getExplorerForConnection(connId)
+	exp, err := a.getConnection(connId)
 	if err != nil {
 		return err
 	}
-	if err := exp.Connect(); err != nil {
-		return err
-	}
-	defer exp.Disconnect()
 	return exp.Delete(path)
 }
 
@@ -225,14 +252,10 @@ func (a *App) ClearTransfers() {
 }
 
 func (a *App) Rename(connId, src, dst string) error {
-	exp, err := a.getExplorerForConnection(connId)
+	exp, err := a.getConnection(connId)
 	if err != nil {
 		return err
 	}
-	if err := exp.Connect(); err != nil {
-		return err
-	}
-	defer exp.Disconnect()
 	return exp.Rename(src, dst)
 }
 
