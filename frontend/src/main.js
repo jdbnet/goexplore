@@ -91,12 +91,22 @@ async function loadConnections() {
                     draggedConnId = null;
                     el.style.opacity = '1';
                 });
+                el.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    if (draggedConnId && draggedConnId !== c.id) {
+                        el.style.borderTop = '2px solid var(--accent)';
+                    }
+                });
+                el.addEventListener('dragleave', (e) => {
+                    el.style.borderTop = '';
+                });
                 el.addEventListener('dragover', (e) => {
                     e.preventDefault();
                     e.dataTransfer.dropEffect = 'move';
                 });
                 el.addEventListener('drop', async (e) => {
                     e.preventDefault();
+                    el.style.borderTop = '';
                     if (!draggedConnId || draggedConnId === c.id) return;
                     
                     const ids = connectionsCache.map(conn => conn.id);
@@ -109,10 +119,10 @@ async function loadConnections() {
                         
                         try {
                             await ReorderConnections(ids);
-                            await loadConnections();
                         } catch (err) {
                             console.error("Failed to reorder connections:", err);
                         }
+                        await loadConnections();
                     }
                 });
 

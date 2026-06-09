@@ -57,6 +57,14 @@ body {
     transition: background 0.2s;
 }
 
+.conn-item * {
+    pointer-events: none;
+}
+
+.conn-item .edit-btn {
+    pointer-events: auto;
+}
+
 .conn-item:hover {
     background: var(--surface-hover);
 }

@@ -32,7 +32,7 @@ func (e *SFTPExplorer) Connect() error {
 		port = 22
 	}
 	
-	var authMethod ssh.AuthMethod
+	var authMethods []ssh.AuthMethod
 	
 	secretStr := strings.TrimSpace(e.secret)
 	// Handle case where newlines might be escaped by mistake
@@ -43,16 +43,35 @@ func (e *SFTPExplorer) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to parse private key: %w", err)
 		}
-		authMethod = ssh.PublicKeys(signer)
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	} else {
-		authMethod = ssh.Password(e.secret)
+		authMethods = append(authMethods, ssh.Password(e.secret))
 	}
+
+	// Always add KeyboardInteractive to support Duo MFA and servers that require interactive auth.
+	authMethods = append(authMethods, ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) (answers []string, err error) {
+		answers = make([]string, len(questions))
+		for i, q := range questions {
+			qLower := strings.ToLower(q)
+			if strings.Contains(secretStr, "-----BEGIN") {
+				// If using a private key, we don't have a password.
+				// If it's a Duo prompt asking for an option, "1" is typically Duo Push.
+				if strings.Contains(qLower, "duo push") || strings.Contains(qLower, "passcode or option") {
+					answers[i] = "1"
+				} else {
+					answers[i] = ""
+				}
+			} else {
+				// Otherwise, respond with the password to keyboard interactive prompts
+				answers[i] = e.secret
+			}
+		}
+		return answers, nil
+	}))
 
 	config := &ssh.ClientConfig{
 		User: e.cfg.Username,
-		Auth: []ssh.AuthMethod{
-			authMethod,
-		},
+		Auth: authMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
