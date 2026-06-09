@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 
 	"goexplore/internal/explorer"
 )
@@ -34,6 +37,7 @@ type Transfer struct {
 	Status      Status  `json:"status"`
 	Error       string  `json:"error,omitempty"`
 	Verify      bool    `json:"verify"`
+	LimitMBps   int     `json:"limit_mbps"`
 
 	srcExp explorer.Explorer
 	dstExp explorer.Explorer
@@ -89,8 +93,19 @@ func (m *Manager) doTransfer(t *Transfer) error {
 	hash := md5.New()
 	tr := io.TeeReader(r, hash)
 
+	var streamReader io.Reader = tr
+	if t.LimitMBps > 0 {
+		limitBytes := t.LimitMBps * 1024 * 1024
+		// Set burst to limitBytes to allow typical io.Copy chunk sizes without erroring
+		limiter := rate.NewLimiter(rate.Limit(limitBytes), limitBytes)
+		streamReader = &throttledReader{
+			r:       tr,
+			limiter: limiter,
+		}
+	}
+
 	pr := &progressReader{
-		r: tr,
+		r: streamReader,
 		t: t,
 	}
 
@@ -118,6 +133,21 @@ func (m *Manager) doTransfer(t *Transfer) error {
 	return nil
 }
 
+type throttledReader struct {
+	r       io.Reader
+	limiter *rate.Limiter
+}
+
+func (tr *throttledReader) Read(p []byte) (int, error) {
+	n, err := tr.r.Read(p)
+	if n > 0 && tr.limiter != nil {
+		if errWait := tr.limiter.WaitN(context.Background(), n); errWait != nil {
+			return n, errWait
+		}
+	}
+	return n, err
+}
+
 type progressReader struct {
 	r io.Reader
 	t *Transfer
@@ -138,7 +168,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int64, srcExp, dstExp explorer.Explorer, verify bool) error {
+func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int64, srcExp, dstExp explorer.Explorer, verify bool, limitMBps int) error {
 	if srcExp == nil || dstExp == nil {
 		return errors.New("invalid explorers")
 	}
@@ -151,6 +181,7 @@ func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int6
 		BytesTotal:  size,
 		Status:      StatusQueued,
 		Verify:      verify,
+		LimitMBps:   limitMBps,
 		srcExp:      srcExp,
 		dstExp:      dstExp,
 	}

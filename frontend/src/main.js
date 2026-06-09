@@ -529,6 +529,7 @@ window.openTransferModal = () => {
 window.closeTransferModal = () => {
     document.getElementById('transfer-modal').style.display = 'none';
     document.getElementById('transfer-verify').checked = false;
+    document.getElementById('transfer-limit').value = "0";
 };
 
 window.loadTransferDestRoot = () => {
@@ -583,7 +584,9 @@ window.loadTransferDestDirectory = async (connId, path) => {
 window.executeTransfer = async () => {
     if (selectedItems.length === 0) return;
     try {
-        await TransferItems(currentConn, transferDestConn, transferDestPath, selectedItems);
+        const verify = document.getElementById('transfer-verify').checked;
+        const limit = parseInt(document.getElementById('transfer-limit').value, 10) || 0;
+        await TransferItems(currentConn, transferDestConn, transferDestPath, selectedItems, verify, limit);
         closeTransferModal();
         showTransfers();
         selectedItems = [];
