@@ -48,7 +48,10 @@ async function init() {
             path_style: document.getElementById('conn-pathstyle').checked,
             username: document.getElementById('conn-username').value
         };
-        const secret = document.getElementById('conn-secret').value;
+        let secret = document.getElementById('conn-secret').value;
+        if (conn.protocol === 'sftp' && document.getElementById('conn-sftp-auth-type').value === 'key') {
+            secret = document.getElementById('conn-secret-key').value;
+        }
 
         try {
             await SaveConnection(conn, secret);
@@ -104,6 +107,8 @@ window.editConnection = (id) => {
     document.getElementById('conn-pathstyle').checked = c.path_style || false;
     document.getElementById('conn-username').value = c.username || '';
     document.getElementById('conn-secret').value = '';
+    document.getElementById('conn-secret-key').value = '';
+    document.getElementById('conn-sftp-auth-type').value = 'password';
     document.getElementById('conn-delete-btn').style.display = 'block';
 
     updateProtocolFields();
@@ -114,6 +119,9 @@ window.openConnModal = () => {
     document.getElementById('modal-title').innerText = "Add Connection";
     document.getElementById('conn-form').reset();
     document.getElementById('conn-id').value = uuidv4();
+    document.getElementById('conn-secret').value = '';
+    document.getElementById('conn-secret-key').value = '';
+    document.getElementById('conn-sftp-auth-type').value = 'password';
     document.getElementById('conn-delete-btn').style.display = 'none';
     updateProtocolFields();
     document.getElementById('conn-modal').style.display = 'flex';
@@ -133,6 +141,30 @@ window.updateProtocolFields = () => {
     const showS3Specific = protocol === 's3';
     document.getElementById('region-group').style.display = showS3Specific ? 'flex' : 'none';
     document.getElementById('pathstyle-group').style.display = showS3Specific ? 'flex' : 'none';
+
+    // SFTP Auth Type toggle
+    const authTypeSelect = document.getElementById('conn-sftp-auth-type');
+    const secretInput = document.getElementById('conn-secret');
+    const secretKeyArea = document.getElementById('conn-secret-key');
+    const secretLabel = document.getElementById('secret-label');
+
+    if (protocol === 'sftp') {
+        authTypeSelect.style.display = 'block';
+        if (authTypeSelect.value === 'key') {
+            secretInput.style.display = 'none';
+            secretKeyArea.style.display = 'block';
+            secretLabel.innerText = 'SSH Private Key';
+        } else {
+            secretInput.style.display = 'block';
+            secretKeyArea.style.display = 'none';
+            secretLabel.innerText = 'Password';
+        }
+    } else {
+        authTypeSelect.style.display = 'none';
+        secretInput.style.display = 'block';
+        secretKeyArea.style.display = 'none';
+        secretLabel.innerText = 'Password / Secret Key';
+    }
 };
 
 window.deleteConnection = async () => {

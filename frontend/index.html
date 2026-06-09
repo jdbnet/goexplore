@@ -123,8 +123,15 @@
                         <input type="text" id="conn-username" placeholder="user">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <label>Password / Secret Key</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label id="secret-label">Password / Secret Key</label>
+                            <select id="conn-sftp-auth-type" style="display: none; width: auto; font-size: 0.75rem; padding: 0.1rem 0.3rem;" onchange="updateProtocolFields()">
+                                <option value="password">Password</option>
+                                <option value="key">Private Key</option>
+                            </select>
+                        </div>
                         <input type="password" id="conn-secret" placeholder="Stored in OS Keychain">
+                        <textarea id="conn-secret-key" style="display: none; width: 100%; box-sizing: border-box; background: var(--bg-alt); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem; font-family: monospace;" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."></textarea>
                     </div>
                 </div>
 

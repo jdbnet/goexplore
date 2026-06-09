@@ -59,7 +59,7 @@ jobs:
         uses: https://gitea.com/actions/gitea-release-action@v1
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
-          name: GoExplore ${{ steps.get_version.outputs.VERSION }}
+          name: ${{ steps.get_version.outputs.VERSION }}
           body: ${{ steps.changelog.outputs.changelog }}
           draft: false
           prerelease: false
