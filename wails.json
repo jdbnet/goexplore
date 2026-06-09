@@ -11,6 +11,7 @@
   },
   "info": {
     "companyName": "JDB-NET Limited",
-    "productName": "GoExplore"
+    "productName": "GoExplore",
+    "productVersion": "0.0.0"
   }
 }

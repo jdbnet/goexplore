@@ -20,6 +20,8 @@ var assets embed.FS
 //go:embed build/appicon.png
 var icon []byte
 
+var Version string = "dev"
+
 func installLinux() {
 	if runtime.GOOS != "linux" {
 		return

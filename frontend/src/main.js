@@ -1,4 +1,4 @@
-import { ListDir, GetConnections, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers } from '../wailsjs/go/main/App.js';
+import { GetVersion, ListDir, GetConnections, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers } from '../wailsjs/go/main/App.js';
 
 let currentConn = 'local';
 let currentPath = '';
@@ -10,9 +10,9 @@ let sortField = 'name';
 let sortAsc = true;
 
 function uuidv4() {
-  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-  );
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
 }
 
 async function init() {
@@ -24,9 +24,17 @@ async function init() {
         }
     }
 
+    try {
+        const version = await GetVersion();
+        const vSpan = document.getElementById('app-version');
+        if (vSpan && version) {
+            vSpan.innerText = version;
+        }
+    } catch (e) { }
+
     await loadConnections();
     await loadDirectory(currentConn, currentPath);
-    
+
     document.getElementById('conn-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const conn = {
@@ -41,12 +49,12 @@ async function init() {
             username: document.getElementById('conn-username').value
         };
         const secret = document.getElementById('conn-secret').value;
-        
+
         try {
             await SaveConnection(conn, secret);
             closeConnModal();
             loadConnections();
-        } catch(err) {
+        } catch (err) {
             alert("Failed to save connection: " + err);
         }
     });
@@ -57,7 +65,7 @@ async function loadConnections() {
     list.innerHTML = `<div class="conn-item ${currentConn === 'local' ? 'active' : ''}" onclick="switchConn('local')">
         <span class="badge">OS</span> <span style="flex:1">Local Filesystem</span>
     </div>`;
-    
+
     try {
         const conns = await GetConnections();
         connectionsCache = conns || [];
@@ -70,7 +78,7 @@ async function loadConnections() {
                 list.appendChild(el);
             });
         }
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 }
@@ -95,9 +103,9 @@ window.editConnection = (id) => {
     document.getElementById('conn-region').value = c.region || '';
     document.getElementById('conn-pathstyle').checked = c.path_style || false;
     document.getElementById('conn-username').value = c.username || '';
-    document.getElementById('conn-secret').value = ''; 
+    document.getElementById('conn-secret').value = '';
     document.getElementById('conn-delete-btn').style.display = 'block';
-    
+
     updateProtocolFields();
     document.getElementById('conn-modal').style.display = 'flex';
 };
@@ -117,10 +125,10 @@ window.closeConnModal = () => {
 
 window.updateProtocolFields = () => {
     const protocol = document.getElementById('conn-protocol').value;
-    
+
     const showBucket = protocol === 's3' || protocol === 'smb';
     document.getElementById('bucket-fields').style.display = showBucket ? 'block' : 'none';
-    
+
     // Only show S3 specific fields when S3 is selected
     const showS3Specific = protocol === 's3';
     document.getElementById('region-group').style.display = showS3Specific ? 'flex' : 'none';
@@ -128,17 +136,17 @@ window.updateProtocolFields = () => {
 };
 
 window.deleteConnection = async () => {
-    if(!confirm("Are you sure you want to delete this connection?")) return;
+    if (!confirm("Are you sure you want to delete this connection?")) return;
     const id = document.getElementById('conn-id').value;
     try {
         await DeleteConnection(id);
         closeConnModal();
-        if(currentConn === id) {
+        if (currentConn === id) {
             switchConn('local');
         } else {
             loadConnections();
         }
-    } catch(err) {
+    } catch (err) {
         alert("Failed to delete connection: " + err);
     }
 };
@@ -147,13 +155,13 @@ async function loadDirectory(connId, path) {
     const tbody = document.getElementById('file-list');
     tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
     document.getElementById('breadcrumb').innerText = path || '/';
-    
+
     try {
         const files = await ListDir(connId, path);
         tbody.innerHTML = '';
         selectedItems = [];
         lastSelectedPath = null;
-        
+
         let displayFiles = files || [];
         if (!showHiddenFiles) {
             displayFiles = displayFiles.filter(f => !f.name.startsWith('.'));
@@ -163,12 +171,12 @@ async function loadDirectory(connId, path) {
             tbody.innerHTML = '<tr><td colspan="4">Empty directory</td></tr>';
             return;
         }
-        
+
         displayFiles.sort((a, b) => {
             if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
-            
+
             let cmp = 0;
-            switch(sortField) {
+            switch (sortField) {
                 case 'name':
                     cmp = a.name.localeCompare(b.name);
                     break;
@@ -203,7 +211,7 @@ async function loadDirectory(connId, path) {
             tr.onclick = (e) => {
                 const path = f.path;
                 const isSelected = selectedItems.some(i => i.path === path);
-                
+
                 if (e.ctrlKey || e.metaKey) {
                     if (isSelected) {
                         selectedItems = selectedItems.filter(i => i.path !== path);
@@ -219,13 +227,13 @@ async function loadDirectory(connId, path) {
                     const currIdx = allRows.findIndex(r => r.dataset.path === path);
                     const startIdx = Math.min(lastIdx, currIdx);
                     const endIdx = Math.max(lastIdx, currIdx);
-                    
+
                     selectedItems = [];
                     allRows.forEach(r => r.classList.remove('selected'));
-                    
-                    for(let i=startIdx; i<=endIdx; i++) {
+
+                    for (let i = startIdx; i <= endIdx; i++) {
                         const row = allRows[i];
-                        if(row.dataset.path) {
+                        if (row.dataset.path) {
                             row.classList.add('selected');
                             selectedItems.push({
                                 path: row.dataset.path,
@@ -251,7 +259,7 @@ async function loadDirectory(connId, path) {
             }
             tbody.appendChild(tr);
         });
-    } catch(e) {
+    } catch (e) {
         tbody.innerHTML = `<tr><td colspan="4" style="color: var(--error)">Error: ${e}</td></tr>`;
     }
 }
@@ -279,7 +287,7 @@ function formatDate(dateString) {
     if (!dateString) return '-';
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 window.setSort = (field) => {
@@ -300,7 +308,7 @@ window.clearTransfers = async () => {
     try {
         await ClearTransfers();
         pollTransfers();
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 };
@@ -311,7 +319,7 @@ async function pollTransfers() {
         const list = document.getElementById('transfer-list');
         const btn = document.getElementById('transfers-btn');
         btn.innerText = `Transfers (${transfers ? transfers.length : 0})`;
-        
+
         if (!transfers || transfers.length === 0) {
             list.innerHTML = '<div style="color: var(--text-secondary);">No active transfers</div>';
             return;
@@ -323,7 +331,7 @@ async function pollTransfers() {
             const speed = t.status === 'active' ? `${t.speed_mbps.toFixed(2)} MB/s` : t.status;
             const eta = t.status === 'active' ? `${t.eta_seconds}s remaining` : '';
             const color = t.status === 'failed' ? 'var(--error)' : (t.status === 'complete' ? 'var(--success)' : 'var(--accent)');
-            
+
             html += `
             <div class="transfer-item">
                 <div style="width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem;" title="${t.filename}">${t.filename}</div>
@@ -338,7 +346,7 @@ async function pollTransfers() {
             </div>`;
         });
         list.innerHTML = html;
-    } catch(e) {
+    } catch (e) {
         console.error(e);
     }
 }
@@ -359,7 +367,7 @@ document.addEventListener('contextmenu', (e) => {
 
     if (row && row.dataset.path && !row.closest('#transfer-dest-list')) {
         e.preventDefault();
-        
+
         if (!selectedItems.some(i => i.path === row.dataset.path)) {
             selectedItems = [{
                 path: row.dataset.path,
@@ -384,7 +392,7 @@ document.addEventListener('contextmenu', (e) => {
         menu.style.top = `${e.pageY}px`;
     } else if (isBrowserPane && !e.target.closest('#transfer-dest-list')) {
         e.preventDefault();
-        
+
         document.getElementById('ctx-rename').style.display = 'none';
         document.getElementById('ctx-transfer').style.display = 'none';
         document.getElementById('ctx-download').style.display = 'none';
@@ -421,7 +429,7 @@ window.handleContextMenu = async (action) => {
     }
 
     if (selectedItems.length === 0) return;
-    
+
     try {
         if (action === 'delete') {
             if (confirm(`Are you sure you want to delete ${selectedItems.length} items?`)) {
@@ -441,7 +449,7 @@ window.handleContextMenu = async (action) => {
                 const pathParts = item.path.split('/');
                 pathParts[pathParts.length - 1] = newName;
                 const newPath = pathParts.join('/');
-                
+
                 await Rename(currentConn, item.path, newPath);
                 refreshCurrentDir();
             }
@@ -494,11 +502,11 @@ window.loadTransferDestDirectory = async (connId, path) => {
     const tbody = document.getElementById('transfer-dest-list');
     tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
     document.getElementById('transfer-dest-breadcrumb').innerText = path || '/';
-    
+
     try {
         const files = await ListDir(connId, path);
         tbody.innerHTML = '';
-        
+
         if (path && path !== '/') {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>📁 ..</td>`;
@@ -515,7 +523,7 @@ window.loadTransferDestDirectory = async (connId, path) => {
             tbody.innerHTML += '<tr><td>Empty directory</td></tr>';
             return;
         }
-        
+
         files.forEach(f => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
@@ -527,7 +535,7 @@ window.loadTransferDestDirectory = async (connId, path) => {
             }
             tbody.appendChild(tr);
         });
-    } catch(e) {
+    } catch (e) {
         tbody.innerHTML = `<tr><td style="color: var(--error)">Error: ${e}</td></tr>`;
     }
 };
@@ -540,7 +548,7 @@ window.executeTransfer = async () => {
         showTransfers();
         selectedItems = [];
         Array.from(document.querySelectorAll('#file-list tr')).forEach(r => r.classList.remove('selected'));
-    } catch(e) {
+    } catch (e) {
         alert("Transfer failed: " + e);
     }
 };
