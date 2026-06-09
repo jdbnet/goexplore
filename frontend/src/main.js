@@ -16,6 +16,14 @@ function uuidv4() {
 }
 
 async function init() {
+    if (window.runtime && window.runtime.Environment) {
+        const env = await window.runtime.Environment();
+        if (env.platform === 'windows') {
+            const nfsOpt = document.querySelector('#conn-protocol option[value="nfs"]');
+            if (nfsOpt) nfsOpt.remove();
+        }
+    }
+
     await loadConnections();
     await loadDirectory(currentConn, currentPath);
     
