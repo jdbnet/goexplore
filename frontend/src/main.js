@@ -174,8 +174,26 @@ window.closeConnModal = () => {
 window.updateProtocolFields = () => {
     const protocol = document.getElementById('conn-protocol').value;
 
-    const showBucket = protocol === 's3' || protocol === 'smb';
+    const showBucket = protocol === 's3' || protocol === 'smb' || protocol === 'nfs';
     document.getElementById('bucket-fields').style.display = showBucket ? 'block' : 'none';
+
+    const bucketLabel = document.getElementById('bucket-label');
+    if (bucketLabel) {
+        if (protocol === 'nfs') {
+            bucketLabel.innerText = 'Export Path';
+        } else if (protocol === 'smb') {
+            bucketLabel.innerText = 'Share';
+        } else {
+            bucketLabel.innerText = 'Bucket';
+        }
+    }
+
+    const isNFS = protocol === 'nfs';
+    const portGroup = document.getElementById('port-group');
+    if (portGroup) portGroup.style.display = isNFS ? 'none' : 'block';
+    
+    const authRow = document.getElementById('auth-row');
+    if (authRow) authRow.style.display = isNFS ? 'none' : 'flex';
 
     // Only show S3 specific fields when S3 is selected
     const showS3Specific = protocol === 's3';
