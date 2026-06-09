@@ -142,3 +142,13 @@ func (m *Manager) GetTransfers() []*Transfer {
 	}
 	return res
 }
+
+func (m *Manager) ClearCompleted() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for id, t := range m.transfers {
+		if t.Status == StatusComplete || t.Status == StatusFailed {
+			delete(m.transfers, id)
+		}
+	}
+}

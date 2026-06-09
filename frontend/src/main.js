@@ -1,8 +1,13 @@
-import { ListDir, GetConnections, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload } from '../wailsjs/go/main/App.js';
+import { ListDir, GetConnections, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers } from '../wailsjs/go/main/App.js';
 
 let currentConn = 'local';
 let currentPath = '';
 let connectionsCache = [];
+let selectedItems = [];
+let lastSelectedPath = null;
+let showHiddenFiles = false;
+let sortField = 'name';
+let sortAsc = true;
 
 function uuidv4() {
   return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
@@ -138,27 +143,104 @@ async function loadDirectory(connId, path) {
     try {
         const files = await ListDir(connId, path);
         tbody.innerHTML = '';
-        if (!files || files.length === 0) {
+        selectedItems = [];
+        lastSelectedPath = null;
+        
+        let displayFiles = files || [];
+        if (!showHiddenFiles) {
+            displayFiles = displayFiles.filter(f => !f.name.startsWith('.'));
+        }
+
+        if (displayFiles.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4">Empty directory</td></tr>';
             return;
         }
         
-        files.forEach(f => {
+        displayFiles.sort((a, b) => {
+            if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+            
+            let cmp = 0;
+            switch(sortField) {
+                case 'name':
+                    cmp = a.name.localeCompare(b.name);
+                    break;
+                case 'size':
+                    cmp = a.size - b.size;
+                    break;
+                case 'modified':
+                    cmp = new Date(a.modified).getTime() - new Date(b.modified).getTime();
+                    if (isNaN(cmp)) cmp = 0;
+                    break;
+                case 'permissions':
+                    cmp = a.permissions.localeCompare(b.permissions);
+                    break;
+            }
+            return sortAsc ? cmp : -cmp;
+        });
+
+        displayFiles.forEach(f => {
             const tr = document.createElement('tr');
+            tr.dataset.path = f.path;
+            tr.dataset.name = f.name;
+            tr.dataset.isDir = f.is_dir;
+            tr.dataset.size = f.size;
+
             tr.innerHTML = `
                 <td>${f.is_dir ? '📁 ' : '📄 '}${f.name}</td>
                 <td>${f.is_dir ? '-' : formatBytes(f.size)}</td>
-                <td>${f.modified}</td>
+                <td>${formatDate(f.modified)}</td>
                 <td>${f.permissions}</td>
             `;
+
+            tr.onclick = (e) => {
+                const path = f.path;
+                const isSelected = selectedItems.some(i => i.path === path);
+                
+                if (e.ctrlKey || e.metaKey) {
+                    if (isSelected) {
+                        selectedItems = selectedItems.filter(i => i.path !== path);
+                        tr.classList.remove('selected');
+                    } else {
+                        selectedItems.push(f);
+                        tr.classList.add('selected');
+                    }
+                    lastSelectedPath = path;
+                } else if (e.shiftKey && lastSelectedPath) {
+                    const allRows = Array.from(tbody.querySelectorAll('tr'));
+                    const lastIdx = allRows.findIndex(r => r.dataset.path === lastSelectedPath);
+                    const currIdx = allRows.findIndex(r => r.dataset.path === path);
+                    const startIdx = Math.min(lastIdx, currIdx);
+                    const endIdx = Math.max(lastIdx, currIdx);
+                    
+                    selectedItems = [];
+                    allRows.forEach(r => r.classList.remove('selected'));
+                    
+                    for(let i=startIdx; i<=endIdx; i++) {
+                        const row = allRows[i];
+                        if(row.dataset.path) {
+                            row.classList.add('selected');
+                            selectedItems.push({
+                                path: row.dataset.path,
+                                name: row.dataset.name,
+                                is_dir: row.dataset.isDir === 'true',
+                                size: parseInt(row.dataset.size) || 0
+                            });
+                        }
+                    }
+                } else {
+                    selectedItems = [f];
+                    Array.from(tbody.querySelectorAll('tr')).forEach(r => r.classList.remove('selected'));
+                    tr.classList.add('selected');
+                    lastSelectedPath = path;
+                }
+            };
+
             if (f.is_dir) {
                 tr.ondblclick = () => {
                     currentPath = f.path;
                     loadDirectory(currentConn, currentPath);
                 };
             }
-            tr.dataset.path = f.path;
-            tr.dataset.name = f.name;
             tbody.appendChild(tr);
         });
     } catch(e) {
@@ -185,22 +267,122 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+window.setSort = (field) => {
+    if (sortField === field) {
+        sortAsc = !sortAsc;
+    } else {
+        sortField = field;
+        sortAsc = true;
+    }
+    ['name', 'size', 'modified', 'permissions'].forEach(f => {
+        document.getElementById(`sort-ind-${f}`).innerText = '';
+    });
+    document.getElementById(`sort-ind-${field}`).innerText = sortAsc ? '↑' : '↓';
+    refreshCurrentDir();
+};
+
+window.clearTransfers = async () => {
+    try {
+        await ClearTransfers();
+        pollTransfers();
+    } catch(e) {
+        console.error(e);
+    }
+};
+
+async function pollTransfers() {
+    try {
+        const transfers = await GetTransfers();
+        const list = document.getElementById('transfer-list');
+        const btn = document.getElementById('transfers-btn');
+        btn.innerText = `Transfers (${transfers ? transfers.length : 0})`;
+        
+        if (!transfers || transfers.length === 0) {
+            list.innerHTML = '<div style="color: var(--text-secondary);">No active transfers</div>';
+            return;
+        }
+
+        let html = '';
+        transfers.forEach(t => {
+            const pct = t.bytes_total > 0 ? (t.bytes_done / t.bytes_total) * 100 : 0;
+            const speed = t.status === 'active' ? `${t.speed_mbps.toFixed(2)} MB/s` : t.status;
+            const eta = t.status === 'active' ? `${t.eta_seconds}s remaining` : '';
+            const color = t.status === 'failed' ? 'var(--error)' : (t.status === 'complete' ? 'var(--success)' : 'var(--accent)');
+            
+            html += `
+            <div class="transfer-item">
+                <div style="width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem;" title="${t.filename}">${t.filename}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${pct}%; background: ${color}"></div>
+                </div>
+                <div class="transfer-meta">
+                    <div>${formatBytes(t.bytes_done)} / ${formatBytes(t.bytes_total)}</div>
+                    <div style="color: ${color}">${speed} ${eta}</div>
+                    ${t.error ? `<div style="color: var(--error); font-size: 0.7rem;">${t.error}</div>` : ''}
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+setInterval(pollTransfers, 1000);
+
 window.addEventListener('load', init);
 
 // Context Menu Logic
-let contextMenuTarget = null;
-
 document.addEventListener('contextmenu', (e) => {
     const menu = document.getElementById('context-menu');
     menu.style.display = 'none';
 
+    document.getElementById('ctx-hidden-text').innerText = showHiddenFiles ? 'Hide Hidden Files' : 'Show Hidden Files';
+
     const row = e.target.closest('tr');
-    if (row && row.dataset.path) {
+    const isBrowserPane = e.target.closest('#browser-pane');
+
+    if (row && row.dataset.path && !row.closest('#transfer-dest-list')) {
         e.preventDefault();
-        contextMenuTarget = {
-            path: row.dataset.path,
-            name: row.dataset.name
-        };
+        
+        if (!selectedItems.some(i => i.path === row.dataset.path)) {
+            selectedItems = [{
+                path: row.dataset.path,
+                name: row.dataset.name,
+                is_dir: row.dataset.isDir === 'true',
+                size: parseInt(row.dataset.size) || 0
+            }];
+            const tbody = document.getElementById('file-list');
+            Array.from(tbody.querySelectorAll('tr')).forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            lastSelectedPath = row.dataset.path;
+        }
+
+        document.getElementById('ctx-rename').style.display = 'block';
+        document.getElementById('ctx-transfer').style.display = 'block';
+        document.getElementById('ctx-download').style.display = 'block';
+        document.getElementById('ctx-delete').style.display = 'block';
+        document.getElementById('ctx-divider').style.display = 'block';
+
+        menu.style.display = 'block';
+        menu.style.left = `${e.pageX}px`;
+        menu.style.top = `${e.pageY}px`;
+    } else if (isBrowserPane && !e.target.closest('#transfer-dest-list')) {
+        e.preventDefault();
+        
+        document.getElementById('ctx-rename').style.display = 'none';
+        document.getElementById('ctx-transfer').style.display = 'none';
+        document.getElementById('ctx-download').style.display = 'none';
+        document.getElementById('ctx-delete').style.display = 'none';
+        document.getElementById('ctx-divider').style.display = 'none';
+
         menu.style.display = 'block';
         menu.style.left = `${e.pageX}px`;
         menu.style.top = `${e.pageY}px`;
@@ -224,33 +406,134 @@ window.toggleUploadMenu = (e) => {
 };
 
 window.handleContextMenu = async (action) => {
-    if (!contextMenuTarget) return;
-    
-    const { path, name } = contextMenuTarget;
+    if (action === 'toggle_hidden') {
+        showHiddenFiles = !showHiddenFiles;
+        refreshCurrentDir();
+        return;
+    }
+
+    if (selectedItems.length === 0) return;
     
     try {
         if (action === 'delete') {
-            if (confirm(`Are you sure you want to delete ${name}?`)) {
-                await Delete(currentConn, path);
+            if (confirm(`Are you sure you want to delete ${selectedItems.length} items?`)) {
+                for (const item of selectedItems) {
+                    await Delete(currentConn, item.path);
+                }
                 refreshCurrentDir();
             }
         } else if (action === 'rename') {
-            const newName = prompt(`Enter new name for ${name}:`, name);
-            if (newName && newName !== name) {
-                // Construct new path by replacing the last part
-                const pathParts = path.split('/');
+            if (selectedItems.length > 1) {
+                alert("Cannot rename multiple items at once.");
+                return;
+            }
+            const item = selectedItems[0];
+            const newName = prompt(`Enter new name for ${item.name}:`, item.name);
+            if (newName && newName !== item.name) {
+                const pathParts = item.path.split('/');
                 pathParts[pathParts.length - 1] = newName;
                 const newPath = pathParts.join('/');
                 
-                await Rename(currentConn, path, newPath);
+                await Rename(currentConn, item.path, newPath);
                 refreshCurrentDir();
             }
         } else if (action === 'download') {
-            await PromptDownload(currentConn, path);
+            for (const item of selectedItems) {
+                await PromptDownload(currentConn, item.path);
+            }
             showTransfers();
+        } else if (action === 'transfer') {
+            openTransferModal();
         }
     } catch (e) {
         alert(`Failed to ${action}: ${e}`);
+    }
+};
+
+window.navigateUp = () => {
+    if (!currentPath || currentPath === '/') return;
+    const parts = currentPath.split('/').filter(p => p);
+    parts.pop();
+    currentPath = parts.length ? '/' + parts.join('/') : '';
+    loadDirectory(currentConn, currentPath);
+};
+
+let transferDestConn = 'local';
+let transferDestPath = '';
+
+window.openTransferModal = () => {
+    const select = document.getElementById('transfer-dest-conn');
+    select.innerHTML = `<option value="local">Local Filesystem</option>`;
+    connectionsCache.forEach(c => {
+        select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+    document.getElementById('transfer-modal').style.display = 'flex';
+    loadTransferDestRoot();
+};
+
+window.closeTransferModal = () => {
+    document.getElementById('transfer-modal').style.display = 'none';
+};
+
+window.loadTransferDestRoot = () => {
+    transferDestConn = document.getElementById('transfer-dest-conn').value;
+    transferDestPath = '';
+    loadTransferDestDirectory(transferDestConn, transferDestPath);
+};
+
+window.loadTransferDestDirectory = async (connId, path) => {
+    transferDestPath = path;
+    const tbody = document.getElementById('transfer-dest-list');
+    tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+    document.getElementById('transfer-dest-breadcrumb').innerText = path || '/';
+    
+    try {
+        const files = await ListDir(connId, path);
+        tbody.innerHTML = '';
+        
+        if (path && path !== '/') {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>📁 ..</td>`;
+            tr.style.cursor = 'pointer';
+            tr.ondblclick = () => {
+                const parts = path.split('/').filter(p => p);
+                parts.pop();
+                loadTransferDestDirectory(connId, parts.length ? '/' + parts.join('/') : '');
+            };
+            tbody.appendChild(tr);
+        }
+
+        if (!files || files.length === 0) {
+            tbody.innerHTML += '<tr><td>Empty directory</td></tr>';
+            return;
+        }
+        
+        files.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.innerHTML = `<td>${f.is_dir ? '📁 ' : '📄 '}${f.name}</td>`;
+            if (f.is_dir) {
+                tr.ondblclick = () => {
+                    loadTransferDestDirectory(connId, f.path);
+                };
+            }
+            tbody.appendChild(tr);
+        });
+    } catch(e) {
+        tbody.innerHTML = `<tr><td style="color: var(--error)">Error: ${e}</td></tr>`;
+    }
+};
+
+window.executeTransfer = async () => {
+    if (selectedItems.length === 0) return;
+    try {
+        await TransferItems(currentConn, transferDestConn, transferDestPath, selectedItems);
+        closeTransferModal();
+        showTransfers();
+        selectedItems = [];
+        Array.from(document.querySelectorAll('#file-list tr')).forEach(r => r.classList.remove('selected'));
+    } catch(e) {
+        alert("Transfer failed: " + e);
     }
 };
 

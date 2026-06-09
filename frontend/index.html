@@ -22,7 +22,10 @@
     
     <div id="main-area">
         <div id="toolbar">
-            <div id="breadcrumb">/</div>
+            <div style="display: flex; align-items: center; flex: 1;">
+                <button class="btn" style="margin-right: 0.5rem; padding: 0.25rem 0.75rem;" onclick="navigateUp()">⬆</button>
+                <div id="breadcrumb">/</div>
+            </div>
             <div class="action-bar">
                 <div style="position: relative; display: inline-block;">
                     <button class="btn" onclick="toggleUploadMenu(event)">Upload ▾</button>
@@ -31,18 +34,18 @@
                         <div class="menu-item" onclick="promptUploadDirectory(); toggleUploadMenu()">Folder</div>
                     </div>
                 </div>
-                <button class="btn" onclick="refreshFiles()">Refresh</button>
-                <button class="btn" id="transfers-btn" onclick="toggleTransfers()">Transfers (0)</button>
+                <button class="btn" onclick="refreshCurrentDir()">Refresh</button>
+                <button class="btn" id="transfers-btn" onclick="showTransfers()">Transfers (0)</button>
             </div>
         </div>
         <div id="browser-pane">
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Size</th>
-                        <th>Modified</th>
-                        <th>Permissions</th>
+                        <th onclick="setSort('name')" style="cursor:pointer">Name <span id="sort-ind-name">↑</span></th>
+                        <th onclick="setSort('size')" style="cursor:pointer">Size <span id="sort-ind-size"></span></th>
+                        <th onclick="setSort('modified')" style="cursor:pointer">Modified <span id="sort-ind-modified"></span></th>
+                        <th onclick="setSort('permissions')" style="cursor:pointer">Permissions <span id="sort-ind-permissions"></span></th>
                     </tr>
                 </thead>
                 <tbody id="file-list">
@@ -53,7 +56,10 @@
         <div id="transfer-tray">
             <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
                 <h3 style="margin: 0;">Transfers</h3>
-                <button class="btn" onclick="hideTransfers()">Close</button>
+                <div>
+                    <button class="btn" style="margin-right: 0.5rem;" onclick="clearTransfers()">Clear Queue</button>
+                    <button class="btn" onclick="hideTransfers()">Close</button>
+                </div>
             </div>
             <div id="transfer-list">
             </div>
@@ -132,9 +138,35 @@
 
     <!-- Context Menu -->
     <div id="context-menu" class="context-menu" style="display: none;">
-        <div class="menu-item" onclick="handleContextMenu('rename')">Rename</div>
-        <div class="menu-item" onclick="handleContextMenu('download')">Download</div>
-        <div class="menu-item" style="color: var(--error);" onclick="handleContextMenu('delete')">Delete</div>
+        <div id="ctx-rename" class="menu-item" onclick="handleContextMenu('rename')">Rename</div>
+        <div id="ctx-transfer" class="menu-item" onclick="handleContextMenu('transfer')">Transfer</div>
+        <div id="ctx-download" class="menu-item" onclick="handleContextMenu('download')">Download</div>
+        <div id="ctx-delete" class="menu-item" style="color: var(--error);" onclick="handleContextMenu('delete')">Delete</div>
+        <div id="ctx-divider" style="border-top: 1px solid var(--border); margin: 0.25rem 0;"></div>
+        <div class="menu-item" onclick="handleContextMenu('toggle_hidden')"><span id="ctx-hidden-text">Show Hidden Files</span></div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div id="transfer-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-top: 0;">Select Destination</h2>
+            <div class="form-group">
+                <label>Connection</label>
+                <select id="transfer-dest-conn" onchange="loadTransferDestRoot()"></select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+                <div id="transfer-dest-breadcrumb" style="font-size: 0.8rem; color: var(--text-secondary); word-break: break-all;">/</div>
+            </div>
+            <div id="transfer-dest-browser" style="height: 300px; overflow-y: auto; border: 1px solid var(--border); background: var(--bg); margin-bottom: 1rem;">
+                <table style="width: 100%;">
+                    <tbody id="transfer-dest-list"></tbody>
+                </table>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn" style="background: transparent; color: var(--text-primary); border-color: var(--border);" onclick="closeTransferModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="executeTransfer()">Transfer Here</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modals and scripts -->

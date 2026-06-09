@@ -142,6 +142,10 @@ tbody tr:hover {
     background: var(--surface-hover);
 }
 
+tbody tr.selected {
+    background: rgba(33, 209, 152, 0.2);
+}
+
 .btn {
     background: var(--accent);
     color: #000;

@@ -60,6 +60,29 @@ export namespace explorer {
 
 }
 
+export namespace main {
+	
+	export class TransferItem {
+	    path: string;
+	    name: string;
+	    is_dir: boolean;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TransferItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.name = source["name"];
+	        this.is_dir = source["is_dir"];
+	        this.size = source["size"];
+	    }
+	}
+
+}
+
 export namespace transfer {
 	
 	export class Transfer {

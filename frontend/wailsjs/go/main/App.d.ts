@@ -3,6 +3,9 @@
 import {config} from '../models';
 import {transfer} from '../models';
 import {explorer} from '../models';
+import {main} from '../models';
+
+export function ClearTransfers():Promise<void>;
 
 export function Delete(arg1:string,arg2:string):Promise<void>;
 
@@ -27,3 +30,5 @@ export function QueueTransfer(arg1:string,arg2:string,arg3:string,arg4:string,ar
 export function Rename(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SaveConnection(arg1:config.ConnectionConfig,arg2:string):Promise<void>;
+
+export function TransferItems(arg1:string,arg2:string,arg3:string,arg4:Array<main.TransferItem>):Promise<void>;

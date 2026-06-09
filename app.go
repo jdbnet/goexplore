@@ -185,6 +185,10 @@ func (a *App) GetTransfers() []*transfer.Transfer {
 	return a.transferManager.GetTransfers()
 }
 
+func (a *App) ClearTransfers() {
+	a.transferManager.ClearCompleted()
+}
+
 func (a *App) Rename(connId, src, dst string) error {
 	exp, err := a.getExplorerForConnection(connId)
 	if err != nil {
@@ -294,4 +298,66 @@ func (a *App) PromptDownload(connId, remotePath string) error {
 	}
 
 	return a.QueueTransfer(id, connId, "local", remotePath, localPath, fileName, size)
+}
+
+type TransferItem struct {
+	Path  string `json:"path"`
+	Name  string `json:"name"`
+	IsDir bool   `json:"is_dir"`
+	Size  int64  `json:"size"`
+}
+
+func (a *App) TransferItems(srcConnId, dstConnId, dstPath string, items []TransferItem) error {
+	for _, item := range items {
+		if !item.IsDir {
+			id := uuid.New().String()
+			
+			remotePath := dstPath
+			if dstPath == "" || dstPath == "/" {
+				remotePath = item.Name
+			} else if dstPath[len(dstPath)-1] != '/' {
+				remotePath = dstPath + "/" + item.Name
+			} else {
+				remotePath = dstPath + item.Name
+			}
+
+			if err := a.QueueTransfer(id, srcConnId, dstConnId, item.Path, remotePath, item.Name, item.Size); err != nil {
+				return err
+			}
+		} else {
+			// Run remote walk in goroutine to not block UI
+			go a.transferRemoteDirectory(srcConnId, dstConnId, item.Path, dstPath)
+		}
+	}
+	return nil
+}
+
+func (a *App) transferRemoteDirectory(srcConnId, dstConnId, srcDirPath, dstBasePath string) {
+	baseName := filepath.Base(srcDirPath)
+	
+	newDstPath := dstBasePath
+	if dstBasePath == "" || dstBasePath == "/" {
+		newDstPath = baseName
+	} else if dstBasePath[len(dstBasePath)-1] != '/' {
+		newDstPath = dstBasePath + "/" + baseName
+	} else {
+		newDstPath = dstBasePath + baseName
+	}
+
+	a.MkDir(dstConnId, newDstPath)
+
+	entries, err := a.ListDir(srcConnId, srcDirPath)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir {
+			a.transferRemoteDirectory(srcConnId, dstConnId, entry.Path, newDstPath)
+		} else {
+			id := uuid.New().String()
+			itemDstPath := newDstPath + "/" + entry.Name
+			a.QueueTransfer(id, srcConnId, dstConnId, entry.Path, itemDstPath, entry.Name, entry.Size)
+		}
+	}
 }
