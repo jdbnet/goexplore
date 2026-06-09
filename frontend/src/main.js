@@ -528,6 +528,7 @@ window.openTransferModal = () => {
 
 window.closeTransferModal = () => {
     document.getElementById('transfer-modal').style.display = 'none';
+    document.getElementById('transfer-verify').checked = false;
 };
 
 window.loadTransferDestRoot = () => {

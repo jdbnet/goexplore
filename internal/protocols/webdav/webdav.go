@@ -1,6 +1,8 @@
 package webdav
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
@@ -101,4 +103,17 @@ func (e *WebDAVExplorer) ReadFile(path string) (io.ReadCloser, error) {
 
 func (e *WebDAVExplorer) WriteFile(path string, r io.Reader, size int64) error {
 	return e.client.WriteStream(path, r, 0644)
+}
+
+func (e *WebDAVExplorer) Checksum(path string) (string, error) {
+	r, err := e.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	h := md5.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

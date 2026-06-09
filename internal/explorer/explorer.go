@@ -21,4 +21,5 @@ type Explorer interface {
 	Rename(src, dst string) error
 	ReadFile(path string) (io.ReadCloser, error)
 	WriteFile(path string, r io.Reader, size int64) error
+	Checksum(path string) (string, error)
 }

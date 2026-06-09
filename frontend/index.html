@@ -176,6 +176,15 @@
                     <tbody id="transfer-dest-list"></tbody>
                 </table>
             </div>
+            
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1rem;">
+                <input type="checkbox" id="transfer-verify" style="width: auto;">
+                <label style="margin: 0; display: flex; flex-direction: column;">
+                    Verify Checksum (MD5)
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">Slower for non-S3 destinations as it requires re-reading the file over the network.</span>
+                </label>
+            </div>
+
             <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button class="btn" style="background: transparent; color: var(--text-primary); border-color: var(--border);" onclick="closeTransferModal()">Cancel</button>
                 <button class="btn btn-primary" onclick="executeTransfer()">Transfer Here</button>

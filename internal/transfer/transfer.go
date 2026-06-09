@@ -1,8 +1,12 @@
 package transfer
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +33,7 @@ type Transfer struct {
 	ETA         int     `json:"eta_seconds"`
 	Status      Status  `json:"status"`
 	Error       string  `json:"error,omitempty"`
+	Verify      bool    `json:"verify"`
 
 	srcExp explorer.Explorer
 	dstExp explorer.Explorer
@@ -81,12 +86,36 @@ func (m *Manager) doTransfer(t *Transfer) error {
 	}
 	defer r.Close()
 
+	hash := md5.New()
+	tr := io.TeeReader(r, hash)
+
 	pr := &progressReader{
-		r: r,
+		r: tr,
 		t: t,
 	}
 
-	return t.dstExp.WriteFile(t.Destination, pr, t.BytesTotal)
+	if err := t.dstExp.WriteFile(t.Destination, pr, t.BytesTotal); err != nil {
+		return err
+	}
+
+	if t.Verify {
+		expectedHash := hex.EncodeToString(hash.Sum(nil))
+		t.Status = StatusActive // Still active during verification
+
+		actualHash, err := t.dstExp.Checksum(t.Destination)
+		if err != nil {
+			return fmt.Errorf("verification failed: could not calculate destination checksum: %w", err)
+		}
+
+		if expectedHash != actualHash {
+			// S3 Multi-part ETags end with -N, we can't easily verify them with local md5
+			if !strings.Contains(actualHash, "-") {
+				return fmt.Errorf("verification failed: checksum mismatch (expected %s, got %s)", expectedHash, actualHash)
+			}
+		}
+	}
+
+	return nil
 }
 
 type progressReader struct {
@@ -109,7 +138,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int64, srcExp, dstExp explorer.Explorer) error {
+func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int64, srcExp, dstExp explorer.Explorer, verify bool) error {
 	if srcExp == nil || dstExp == nil {
 		return errors.New("invalid explorers")
 	}
@@ -121,6 +150,7 @@ func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int6
 		Filename:    filename,
 		BytesTotal:  size,
 		Status:      StatusQueued,
+		Verify:      verify,
 		srcExp:      srcExp,
 		dstExp:      dstExp,
 	}

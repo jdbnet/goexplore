@@ -1,7 +1,9 @@
 package ftp
 
 import (
+	"crypto/md5"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -176,4 +178,17 @@ func (e *FTPExplorer) ReadFile(path string) (io.ReadCloser, error) {
 
 func (e *FTPExplorer) WriteFile(path string, r io.Reader, size int64) error {
 	return e.client.Stor(path, r)
+}
+
+func (e *FTPExplorer) Checksum(path string) (string, error) {
+	r, err := e.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	defer r.Close()
+	h := md5.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

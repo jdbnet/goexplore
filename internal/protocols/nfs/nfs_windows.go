@@ -25,3 +25,4 @@ func (e *NFSExplorer) Delete(path string) error { return nil }
 func (e *NFSExplorer) Rename(src, dst string) error { return nil }
 func (e *NFSExplorer) ReadFile(path string) (io.ReadCloser, error) { return nil, nil }
 func (e *NFSExplorer) WriteFile(path string, r io.Reader, size int64) error { return nil }
+func (e *NFSExplorer) Checksum(path string) (string, error) { return "", nil }
