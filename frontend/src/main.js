@@ -573,9 +573,10 @@ window.handleContextMenu = async (action) => {
             const item = selectedItems[0];
             const newName = prompt(`Enter new name for ${item.name}:`, item.name);
             if (newName && newName !== item.name) {
-                const pathParts = item.path.split('/');
+                const sep = item.path.includes('\\') ? '\\' : '/';
+                const pathParts = item.path.split(/[/\\]/);
                 pathParts[pathParts.length - 1] = newName;
-                const newPath = pathParts.join('/');
+                const newPath = pathParts.join(sep);
 
                 await Rename(currentConn, item.path, newPath);
                 refreshCurrentDir();
@@ -595,9 +596,18 @@ window.handleContextMenu = async (action) => {
 
 window.navigateUp = () => {
     if (!currentPath || currentPath === '/') return;
-    const parts = currentPath.split('/').filter(p => p);
+    const startsWithSlash = currentPath.startsWith('/');
+    const sep = currentPath.includes('\\') ? '\\' : '/';
+    const parts = currentPath.split(/[/\\]/).filter(p => p);
     parts.pop();
-    currentPath = parts.length ? '/' + parts.join('/') : '';
+    if (parts.length === 0) {
+        currentPath = '';
+    } else {
+        currentPath = (startsWithSlash ? '/' : '') + parts.join(sep);
+        if (!startsWithSlash && parts.length === 1 && parts[0].endsWith(':')) {
+            currentPath += sep;
+        }
+    }
     loadDirectory(currentConn, currentPath);
 };
 
@@ -641,9 +651,18 @@ window.loadTransferDestDirectory = async (connId, path) => {
             tr.innerHTML = `<td>📁 ..</td>`;
             tr.style.cursor = 'pointer';
             tr.ondblclick = () => {
-                const parts = path.split('/').filter(p => p);
+                const startsWithSlash = path.startsWith('/');
+                const sep = path.includes('\\') ? '\\' : '/';
+                const parts = path.split(/[/\\]/).filter(p => p);
                 parts.pop();
-                loadTransferDestDirectory(connId, parts.length ? '/' + parts.join('/') : '');
+                let newPath = '';
+                if (parts.length > 0) {
+                    newPath = (startsWithSlash ? '/' : '') + parts.join(sep);
+                    if (!startsWithSlash && parts.length === 1 && parts[0].endsWith(':')) {
+                        newPath += sep;
+                    }
+                }
+                loadTransferDestDirectory(connId, newPath);
             };
             tbody.appendChild(tr);
         }
