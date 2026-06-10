@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	appcfg "goexplore/internal/config"
 	"goexplore/internal/explorer"
 )
@@ -243,11 +244,61 @@ func (e *S3Explorer) Delete(path string) error {
 		return err
 	}
 	
+	// Try to delete the exact object (might be a file or a folder marker)
 	_, err = e.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(subpath),
 	})
-	return err
+	if err != nil {
+		// Ignore error; it might just be a prefix with no exact marker
+	}
+
+	// Also treat subpath as a folder prefix and delete all matching objects
+	prefix := subpath
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	var continuationToken *string
+	for {
+		listInput := &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			Prefix:            aws.String(prefix),
+			ContinuationToken: continuationToken,
+		}
+		listOutput, err := e.client.ListObjectsV2(context.TODO(), listInput)
+		if err != nil {
+			return err
+		}
+
+		if len(listOutput.Contents) > 0 {
+			var objectsToDelete []types.ObjectIdentifier
+			for _, obj := range listOutput.Contents {
+				objectsToDelete = append(objectsToDelete, types.ObjectIdentifier{
+					Key: obj.Key,
+				})
+			}
+
+			_, err = e.client.DeleteObjects(context.TODO(), &s3.DeleteObjectsInput{
+				Bucket: aws.String(bucket),
+				Delete: &types.Delete{
+					Objects: objectsToDelete,
+					Quiet:   aws.Bool(true),
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		if listOutput.IsTruncated != nil && *listOutput.IsTruncated {
+			continuationToken = listOutput.NextContinuationToken
+		} else {
+			break
+		}
+	}
+	
+	return nil
 }
 
 func (e *S3Explorer) Rename(src, dst string) error {
