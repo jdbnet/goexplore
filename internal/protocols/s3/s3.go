@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	appcfg "goexplore/internal/config"
@@ -57,6 +58,8 @@ func (e *S3Explorer) Connect() error {
 			o.BaseEndpoint = aws.String(host)
 		}
 		o.UsePathStyle = e.cfg.PathStyle
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
 	}
 
 	e.client = s3.NewFromConfig(awsCfg, clientOpts)
@@ -351,7 +354,9 @@ func (e *S3Explorer) WriteFile(path string, r io.Reader, size int64) error {
 	if err != nil {
 		return err
 	}
-	_, err = e.client.PutObject(context.TODO(), &s3.PutObjectInput{
+	
+	uploader := manager.NewUploader(e.client)
+	_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(subpath),
 		Body:   r,
