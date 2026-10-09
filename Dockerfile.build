@@ -1,4 +1,4 @@
-FROM golang:1.26.4-bookworm
+FROM golang:1.27.2-bookworm
 
 # Install required system dependencies for Wails, GTK, WebKit, and MinGW for cross-compiling
 RUN apt-get update && apt-get install -y \
