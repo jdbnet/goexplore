@@ -4,84 +4,95 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>GoExplore</title>
+    <script>
+        (function () {
+            var stored = localStorage.getItem('goexplore-theme');
+            var theme = stored || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
     <link rel="stylesheet" href="./src/style.css"/>
 </head>
 <body>
-    <div id="sidebar">
+    <aside id="sidebar">
         <div class="sidebar-header">
-            <img src="./src/assets/appicon.png" alt="Icon" style="width: 24px; height: 24px; margin-right: 0.5rem;"/>
-            <span>GoExplore</span>
-            <span id="app-version" style="font-size: 0.7rem; color: var(--text-secondary); margin-left: 0.5rem; border: 1px solid var(--border); padding: 0.1rem 0.3rem; border-radius: 4px;"></span>
+            <img class="brand-mark" src="./src/assets/appicon.png" alt=""/>
+            <div class="brand-copy">
+                <span class="brand-name">GoExplore</span>
+                <span id="app-version"></span>
+            </div>
         </div>
-        <div class="conn-list" id="conn-list">
-            <!-- Connections will be populated here -->
+        <div class="sidebar-label">Places</div>
+        <div class="conn-list" id="conn-list"></div>
+        <div class="sidebar-footer">
+            <button class="btn" type="button" onclick="openConnModal()">Add connection</button>
+            <button class="btn btn-quiet btn-icon" id="theme-toggle" type="button" onclick="toggleTheme()" title="Switch to light mode" aria-label="Switch to light mode">
+                <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"/></svg>
+            </button>
         </div>
-        <div style="padding: 1rem; border-top: 1px solid var(--border);">
-            <button class="btn" style="width: 100%;" onclick="openConnModal()">Add Connection</button>
-        </div>
-    </div>
-    
+    </aside>
+
     <div id="main-area">
         <div id="toolbar">
-            <div style="display: flex; align-items: center; flex: 1;">
-                <button class="btn" style="margin-right: 0.5rem; padding: 0.25rem 0.75rem;" onclick="navigateUp()">⬆</button>
+            <div class="nav-cluster">
+                <button class="btn btn-quiet btn-icon" type="button" title="Up" onclick="navigateUp()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+                </button>
                 <div id="breadcrumb">/</div>
             </div>
             <div class="action-bar">
-                <div style="position: relative; display: inline-block;">
-                    <button class="btn" onclick="toggleUploadMenu(event)">Upload ▾</button>
-                    <div id="upload-menu" class="context-menu" style="display: none; top: 100%; left: 0; margin-top: 0.5rem; min-width: 100px;">
-                        <div class="menu-item" onclick="promptUploadFiles(); toggleUploadMenu()">File(s)</div>
+                <div class="upload-wrap">
+                    <button class="btn btn-quiet" type="button" onclick="toggleUploadMenu(event)">Upload</button>
+                    <div id="upload-menu" class="context-menu" style="display: none;">
+                        <div class="menu-item" onclick="promptUploadFiles(); toggleUploadMenu()">Files</div>
                         <div class="menu-item" onclick="promptUploadDirectory(); toggleUploadMenu()">Folder</div>
                     </div>
                 </div>
-                <button class="btn" onclick="refreshCurrentDir()">Refresh</button>
-                <button class="btn" id="transfers-btn" onclick="showTransfers()">Transfers (0)</button>
+                <button class="btn btn-quiet" type="button" onclick="refreshCurrentDir()">Refresh</button>
+                <button class="btn" id="transfers-btn" type="button" onclick="showTransfers()">Transfers (0)</button>
             </div>
         </div>
         <div id="browser-pane">
             <table>
                 <thead>
                     <tr>
-                        <th onclick="setSort('name')" style="cursor:pointer">Name <span id="sort-ind-name">↑</span></th>
-                        <th onclick="setSort('size')" style="cursor:pointer">Size <span id="sort-ind-size"></span></th>
-                        <th onclick="setSort('modified')" style="cursor:pointer">Modified <span id="sort-ind-modified"></span></th>
-                        <th onclick="setSort('permissions')" style="cursor:pointer">Permissions <span id="sort-ind-permissions"></span></th>
+                        <th onclick="setSort('name')">Name <span id="sort-ind-name">↑</span></th>
+                        <th onclick="setSort('size')">Size <span id="sort-ind-size"></span></th>
+                        <th onclick="setSort('modified')">Modified <span id="sort-ind-modified"></span></th>
+                        <th onclick="setSort('permissions')">Permissions <span id="sort-ind-permissions"></span></th>
                     </tr>
                 </thead>
-                <tbody id="file-list">
-                    <!-- Files will be populated here -->
-                </tbody>
+                <tbody id="file-list"></tbody>
             </table>
         </div>
         <div id="transfer-tray">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <h3 style="margin: 0;">Transfers</h3>
-                <div>
-                    <button class="btn" style="margin-right: 0.5rem;" onclick="clearTransfers()">Clear Queue</button>
-                    <button class="btn" onclick="hideTransfers()">Close</button>
+            <div class="tray-header">
+                <h3>Transfers</h3>
+                <div class="tray-actions">
+                    <button class="btn btn-quiet" type="button" onclick="clearTransfers()">Clear finished</button>
+                    <button class="btn btn-quiet" type="button" onclick="hideTransfers()">Close</button>
                 </div>
             </div>
-            <div id="transfer-list">
-            </div>
+            <div id="transfer-list"></div>
         </div>
     </div>
 
     <div id="conn-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2 id="modal-title" style="margin-top: 0;">Add Connection</h2>
+            <h2 id="modal-title">Add connection</h2>
             <form id="conn-form">
                 <input type="hidden" id="conn-id">
-                
+
                 <div class="form-group">
-                    <label>Name</label>
+                    <label for="conn-name">Name</label>
                     <input type="text" id="conn-name" required placeholder="My Server">
                 </div>
-                
+
                 <div class="form-group">
-                    <label>Protocol</label>
+                    <label for="conn-protocol">Protocol</label>
                     <select id="conn-protocol" onchange="updateProtocolFields()">
-                        <option value="s3">S3 / S3-Compatible</option>
+                        <option value="s3">S3 / S3-compatible</option>
                         <option value="sftp">SFTP</option>
                         <option value="ftp">FTP</option>
                         <option value="webdav">WebDAV</option>
@@ -92,11 +103,11 @@
 
                 <div class="form-row">
                     <div class="form-group" style="flex: 3;">
-                        <label>Host</label>
+                        <label for="conn-host">Host</label>
                         <input type="text" id="conn-host" placeholder="example.com">
                     </div>
                     <div class="form-group" style="flex: 1;" id="port-group">
-                        <label>Port</label>
+                        <label for="conn-port">Port</label>
                         <input type="number" id="conn-port" placeholder="22">
                     </div>
                 </div>
@@ -104,101 +115,96 @@
                 <div id="bucket-fields" style="display: none;">
                     <div class="form-row">
                         <div class="form-group" style="flex: 1;">
-                            <label id="bucket-label">Bucket / Share</label>
+                            <label id="bucket-label" for="conn-bucket">Bucket</label>
                             <input type="text" id="conn-bucket" placeholder="my-bucket-or-share">
                         </div>
                         <div class="form-group" style="flex: 1;" id="region-group">
-                            <label>Region</label>
+                            <label for="conn-region">Region</label>
                             <input type="text" id="conn-region" placeholder="us-east-1">
                         </div>
                     </div>
-                    <div class="form-group" id="pathstyle-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row;">
-                        <input type="checkbox" id="conn-pathstyle" style="width: auto;">
-                        <label style="margin: 0;">Use Path-Style URLs</label>
+                    <div class="form-group check-row" id="pathstyle-group">
+                        <input type="checkbox" id="conn-pathstyle">
+                        <label for="conn-pathstyle">Use path-style URLs</label>
                     </div>
                 </div>
 
-                <div class="form-group" id="ftp-secure-group" style="display: none; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1rem;">
-                    <input type="checkbox" id="conn-secure" style="width: auto;">
-                    <label style="margin: 0;">Use FTPS (Secure Explicit TLS)</label>
+                <div class="form-group check-row" id="ftp-secure-group" style="display: none;">
+                    <input type="checkbox" id="conn-secure">
+                    <label for="conn-secure">Use FTPS (explicit TLS)</label>
                 </div>
 
                 <div class="form-row" id="auth-row">
                     <div class="form-group" style="flex: 1;">
-                        <label>Username / Access Key</label>
+                        <label for="conn-username">Username / access key</label>
                         <input type="text" id="conn-username" placeholder="user">
                     </div>
                     <div class="form-group" style="flex: 1;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <label id="secret-label">Password / Secret Key</label>
-                            <select id="conn-sftp-auth-type" style="display: none; width: auto; font-size: 0.75rem; padding: 0.1rem 0.3rem;" onchange="updateProtocolFields()">
+                        <div class="secret-head">
+                            <label id="secret-label" for="conn-secret">Password / secret key</label>
+                            <select id="conn-sftp-auth-type" style="display: none;" onchange="updateProtocolFields()">
                                 <option value="password">Password</option>
-                                <option value="key">Private Key</option>
+                                <option value="key">Private key</option>
                             </select>
                         </div>
-                        <input type="password" id="conn-secret" placeholder="Stored in OS Keychain">
-                        <textarea id="conn-secret-key" style="display: none; width: 100%; box-sizing: border-box; background: var(--bg-alt); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem; font-family: monospace;" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."></textarea>
+                        <input type="password" id="conn-secret" placeholder="Stored in the OS keychain">
+                        <textarea id="conn-secret-key" style="display: none;" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                <div class="modal-actions">
                     <button type="button" class="btn btn-danger" id="conn-delete-btn" style="display: none; margin-right: auto;" onclick="deleteConnection()">Delete</button>
-                    <button type="button" class="btn" style="background: transparent; color: var(--text-primary); border-color: var(--border);" onclick="closeConnModal()">Cancel</button>
+                    <button type="button" class="btn btn-quiet" onclick="closeConnModal()">Cancel</button>
                     <button type="submit" class="btn">Save</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Context Menu -->
     <div id="context-menu" class="context-menu" style="display: none;">
         <div id="ctx-rename" class="menu-item" onclick="handleContextMenu('rename')">Rename</div>
         <div id="ctx-transfer" class="menu-item" onclick="handleContextMenu('transfer')">Transfer</div>
         <div id="ctx-download" class="menu-item" onclick="handleContextMenu('download')">Download</div>
-        <div id="ctx-delete" class="menu-item" style="color: var(--error);" onclick="handleContextMenu('delete')">Delete</div>
-        <div id="ctx-divider" style="border-top: 1px solid var(--border); margin: 0.25rem 0;"></div>
-        <div class="menu-item" onclick="handleContextMenu('toggle_hidden')"><span id="ctx-hidden-text">Show Hidden Files</span></div>
+        <div id="ctx-delete" class="menu-item menu-danger" onclick="handleContextMenu('delete')">Delete</div>
+        <div id="ctx-divider" class="menu-divider"></div>
+        <div class="menu-item" onclick="handleContextMenu('toggle_hidden')"><span id="ctx-hidden-text">Show hidden files</span></div>
     </div>
 
-    <!-- Transfer Modal -->
     <div id="transfer-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2 style="margin-top: 0;">Select Destination</h2>
+            <h2>Select destination</h2>
             <div class="form-group">
-                <label>Connection</label>
+                <label for="transfer-dest-conn">Connection</label>
                 <select id="transfer-dest-conn" onchange="loadTransferDestRoot()"></select>
             </div>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-                <div id="transfer-dest-breadcrumb" style="font-size: 0.8rem; color: var(--text-secondary); word-break: break-all;">/</div>
-            </div>
-            <div id="transfer-dest-browser" style="height: 300px; overflow-y: auto; border: 1px solid var(--border); background: var(--bg); margin-bottom: 1rem;">
-                <table style="width: 100%;">
+            <div id="transfer-dest-breadcrumb" class="path-label">/</div>
+            <div id="transfer-dest-browser" class="dest-browser">
+                <table>
                     <tbody id="transfer-dest-list"></tbody>
                 </table>
             </div>
-            
-            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1rem;">
-                <input type="checkbox" id="transfer-verify" style="width: auto;">
-                <label style="margin: 0; display: flex; flex-direction: column;">
-                    Verify Checksum (MD5)
-                    <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: normal;">Slower for non-S3 destinations as it requires re-reading the file over the network.</span>
+
+            <div class="form-group check-row">
+                <input type="checkbox" id="transfer-verify">
+                <label for="transfer-verify">
+                    Verify checksum (MD5)
+                    <span class="hint">Slower for non-S3 destinations because the file is read again over the network.</span>
                 </label>
             </div>
 
-            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 1.5rem;">
-                <label style="margin: 0; width: 120px;">Max Speed (MB/s)</label>
-                <input type="number" id="transfer-limit" value="0" min="0" style="width: 80px;">
-                <span style="font-size: 0.75rem; color: var(--text-secondary);">(0 = Unlimited)</span>
+            <div class="speed-row">
+                <label for="transfer-limit">Max speed (MB/s)</label>
+                <input type="number" id="transfer-limit" value="0" min="0">
+                <span class="hint">0 is unlimited</span>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
-                <button class="btn" style="background: transparent; color: var(--text-primary); border-color: var(--border);" onclick="closeTransferModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="executeTransfer()">Transfer Here</button>
+            <div class="modal-actions">
+                <button class="btn btn-quiet" type="button" onclick="closeTransferModal()">Cancel</button>
+                <button class="btn" type="button" onclick="executeTransfer()">Transfer here</button>
             </div>
         </div>
     </div>
 
-    <!-- Modals and scripts -->
     <script src="./src/main.js" type="module"></script>
 </body>
 </html>

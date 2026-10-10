@@ -16,7 +16,23 @@ function uuidv4() {
     );
 }
 
+function syncThemeButton() {
+    const button = document.getElementById('theme-toggle');
+    if (!button) return;
+    const label = document.documentElement.dataset.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+    button.title = label;
+    button.setAttribute('aria-label', label);
+}
+
+window.toggleTheme = () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('goexplore-theme', next);
+    syncThemeButton();
+};
+
 async function init() {
+    syncThemeButton();
     if (window.runtime && window.runtime.Environment) {
         const env = await window.runtime.Environment();
         if (env.platform === 'windows') {
@@ -68,7 +84,7 @@ async function init() {
 async function loadConnections() {
     const list = document.getElementById('conn-list');
     list.innerHTML = `<div class="conn-item ${currentConn === 'local' ? 'active' : ''}" onclick="switchConn('local')">
-        <span class="badge">OS</span> <span style="flex:1">Local Filesystem</span>
+        <span class="badge">OS</span> <span class="conn-label">Local filesystem</span>
     </div>`;
 
     try {
@@ -78,7 +94,7 @@ async function loadConnections() {
             connectionsCache.forEach(c => {
                 const el = document.createElement('div');
                 el.className = `conn-item ${currentConn === c.id ? 'active' : ''}`;
-                el.innerHTML = `<span class="badge">${c.protocol}</span> <span style="flex:1">${c.name}</span> <svg class="edit-btn" viewBox="0 0 24 24" width="16" height="16" fill="var(--accent)" style="cursor: pointer;" onclick="event.stopPropagation(); editConnection('${c.id}')"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>`;
+                el.innerHTML = `<span class="badge">${c.protocol}</span> <span class="conn-label">${c.name}</span> <svg class="edit-btn" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" onclick="event.stopPropagation(); editConnection('${c.id}')"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>`;
                 el.onclick = () => switchConn(c.id);
                 
                 el.draggable = true;
@@ -307,7 +323,7 @@ async function loadDirectory(connId, path) {
             tr.dataset.size = f.size;
 
             tr.innerHTML = `
-                <td>${f.is_dir ? '📁 ' : '📄 '}${f.name}</td>
+                <td><div class="name-cell"><span class="kind ${f.is_dir ? 'kind-dir' : 'kind-file'}"></span><span>${f.name}</span></div></td>
                 <td>${f.is_dir ? '-' : formatBytes(f.size)}</td>
                 <td>${formatDate(f.modified)}</td>
                 <td>${f.permissions}</td>
@@ -374,10 +390,10 @@ window.refreshCurrentDir = () => {
 };
 
 window.showTransfers = () => {
-    document.getElementById('transfer-tray').style.display = 'block';
+    document.getElementById('transfer-tray').classList.add('open');
 };
 window.hideTransfers = () => {
-    document.getElementById('transfer-tray').style.display = 'none';
+    document.getElementById('transfer-tray').classList.remove('open');
 };
 
 function formatBytes(bytes) {
@@ -426,7 +442,7 @@ async function pollTransfers() {
         btn.innerText = `Transfers (${transfers ? transfers.length : 0})`;
 
         if (!transfers || transfers.length === 0) {
-            list.innerHTML = '<div style="color: var(--text-secondary);">No active transfers</div>';
+            list.innerHTML = '<div class="empty-note">No active transfers</div>';
             return;
         }
 
@@ -439,7 +455,7 @@ async function pollTransfers() {
 
             html += `
             <div class="transfer-item">
-                <div style="width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem;" title="${t.filename}">${t.filename}</div>
+                <div class="transfer-name" title="${t.filename}">${t.filename}</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${pct}%; background: ${color}"></div>
                 </div>
@@ -465,7 +481,7 @@ document.addEventListener('contextmenu', (e) => {
     const menu = document.getElementById('context-menu');
     menu.style.display = 'none';
 
-    document.getElementById('ctx-hidden-text').innerText = showHiddenFiles ? 'Hide Hidden Files' : 'Show Hidden Files';
+    document.getElementById('ctx-hidden-text').innerText = showHiddenFiles ? 'Hide hidden files' : 'Show hidden files';
 
     const row = e.target.closest('tr');
     const isBrowserPane = e.target.closest('#browser-pane');
@@ -648,7 +664,7 @@ window.loadTransferDestDirectory = async (connId, path) => {
 
         if (path && path !== '/') {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>📁 ..</td>`;
+            tr.innerHTML = `<td><div class="name-cell"><span class="kind kind-dir"></span><span>..</span></div></td>`;
             tr.style.cursor = 'pointer';
             tr.ondblclick = () => {
                 const startsWithSlash = path.startsWith('/');
@@ -675,7 +691,7 @@ window.loadTransferDestDirectory = async (connId, path) => {
         files.forEach(f => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
-            tr.innerHTML = `<td>${f.is_dir ? '📁 ' : '📄 '}${f.name}</td>`;
+            tr.innerHTML = `<td><div class="name-cell"><span class="kind ${f.is_dir ? 'kind-dir' : 'kind-file'}"></span><span>${f.name}</span></div></td>`;
             if (f.is_dir) {
                 tr.ondblclick = () => {
                     loadTransferDestDirectory(connId, f.path);
