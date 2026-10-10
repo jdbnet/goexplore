@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -35,6 +36,10 @@ func installLinux() {
 
 	exe, err := os.Executable()
 	if err != nil {
+		return
+	}
+
+	if installedUnderUsr(exe) {
 		return
 	}
 
@@ -82,6 +87,20 @@ Categories=Utility;FileTools;`, targetExe, iconPath)
 	cmd := exec.Command(targetExe)
 	cmd.Start()
 	os.Exit(0)
+}
+
+func installedUnderUsr(exe string) bool {
+	candidates := []string{exe}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		candidates = append(candidates, resolved)
+	}
+	for _, path := range candidates {
+		clean := filepath.Clean(path)
+		if clean == "/usr" || strings.HasPrefix(clean, "/usr/") {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {

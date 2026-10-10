@@ -19,11 +19,18 @@
 
 Download the latest version of GoExplore for your operating system:
 
+- **Debian and Ubuntu**
+
+  ```bash
+  curl -fsSL https://apt.jdbnet.co.uk/install/stable.sh | sudo bash
+  sudo apt install goexplore
+  ```
+
 - **Windows (64-bit)**
-  [Download Installer (.exe)](https://apps.jdbnet.co.uk/goexplore/goexplore-windows-installer.exe)
-  
-- **Linux (AMD64)**
-  [Download Binary](https://apps.jdbnet.co.uk/goexplore/goexplore-linux-amd64)
+  [Download Installer (.exe)](https://github.com/jdbnet/goexplore/releases/latest/download/goexplore-windows-installer.exe)
+
+- **Linux (AMD64 binary)**
+  [Download Binary](https://github.com/jdbnet/goexplore/releases/latest/download/goexplore-linux-amd64)
 
 ---
 
@@ -35,10 +42,21 @@ Download the latest version of GoExplore for your operating system:
 3. Launch **GoExplore** from your Start menu!
 
 ### Linux
-1. Download the **Linux binary** from the link above.
-2. Give the file executable permissions via your terminal: `chmod +x goexplore-linux-amd64`
+Install from the apt repository:
+
+```bash
+curl -fsSL https://apt.jdbnet.co.uk/install/stable.sh | sudo bash
+sudo apt install goexplore
+```
+
+The package installs GoExplore to `/usr/bin/goexplore` and adds a desktop entry.
+
+Or download the binary from [GitHub Releases](https://github.com/jdbnet/goexplore/releases/latest):
+
+1. Download `goexplore-linux-amd64`.
+2. Give the file executable permissions: `chmod +x goexplore-linux-amd64`
 3. Run the binary.
-4. **GoExplore** will automatically install itself onto your system, create a desktop shortcut, and place its icon in your application launcher for future use! You can safely delete the downloaded file afterward.
+4. **GoExplore** will copy itself into your application launcher and create a desktop shortcut. You can delete the downloaded file afterward.
 
 ---
 

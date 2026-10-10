@@ -1,0 +1,28 @@
+name: goexplore
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${NFPM_VERSION}
+section: utils
+priority: optional
+maintainer: Jamie <jamie@jdbnet.co.uk>
+description: |-
+  Cross-platform file manager for local files, S3, SMB, SFTP, WebDAV, NFS, and FTP.
+vendor: JDB-NET
+homepage: https://github.com/jdbnet/goexplore
+
+depends:
+  - libgtk-3-0
+  - libwebkit2gtk-4.1-0
+
+contents:
+  - src: dist/nfpm-staging/goexplore
+    dst: /usr/bin/goexplore
+    file_info:
+      mode: 0755
+  - src: packaging/linux/goexplore.desktop
+    dst: /usr/share/applications/goexplore.desktop
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/128x128/apps/goexplore.png
+
+deb:
+  compression: gzip

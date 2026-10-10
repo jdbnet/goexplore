@@ -48,6 +48,7 @@ type Transfer struct {
 type Manager struct {
 	mu          sync.Mutex
 	transfers   map[string]*Transfer
+	order       []string
 	queue       chan *Transfer
 	concurrency int
 }
@@ -188,6 +189,7 @@ func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int6
 
 	m.mu.Lock()
 	m.transfers[id] = t
+	m.order = append(m.order, id)
 	m.mu.Unlock()
 
 	m.queue <- t
@@ -197,9 +199,11 @@ func (m *Manager) QueueTransfer(id, srcPath, dstPath, filename string, size int6
 func (m *Manager) GetTransfers() []*Transfer {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	res := make([]*Transfer, 0, len(m.transfers))
-	for _, t := range m.transfers {
-		res = append(res, t)
+	res := make([]*Transfer, 0, len(m.order))
+	for _, id := range m.order {
+		if t, ok := m.transfers[id]; ok {
+			res = append(res, t)
+		}
 	}
 	return res
 }
@@ -207,9 +211,17 @@ func (m *Manager) GetTransfers() []*Transfer {
 func (m *Manager) ClearCompleted() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for id, t := range m.transfers {
+	kept := m.order[:0]
+	for _, id := range m.order {
+		t, ok := m.transfers[id]
+		if !ok {
+			continue
+		}
 		if t.Status == StatusComplete || t.Status == StatusFailed {
 			delete(m.transfers, id)
+			continue
 		}
+		kept = append(kept, id)
 	}
+	m.order = kept
 }

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoExplore
+Comment=File manager for local and remote storage
+Exec=goexplore
+Icon=goexplore
+Terminal=false
+Categories=Utility;FileTools;
+StartupNotify=false

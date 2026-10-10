@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  APTUARY_DISTRIBUTION: stable
+  APTUARY_COMPONENT: main
+  NODE_VERSION: "22"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semantic.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: semantic
+        uses: go-semantic-release/action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: version
+    if: needs.version.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.version.outputs.version }}
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build Linux, Windows, and Debian package
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci-build-amd64.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          name: v${{ needs.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/goexplore-linux-amd64
+            dist/goexplore-windows-installer.exe
+            dist/goexplore_*_amd64.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Aptuary
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          APTUARY_URL: ${{ secrets.APTUARY_URL }}
+          APTUARY_API_KEY: ${{ secrets.APTUARY_API_KEY }}
+        run: |
+          if [ -z "$APTUARY_URL" ] || [ -z "$APTUARY_API_KEY" ]; then
+            echo "Skipping Aptuary upload (APTUARY_URL and APTUARY_API_KEY secrets not set)"
+            exit 0
+          fi
+          BASE="${APTUARY_URL%/}"
+          QUERY="distribution=${APTUARY_DISTRIBUTION}&component=${APTUARY_COMPONENT}"
+          for deb in dist/goexplore_${VERSION}_*.deb; do
+            echo "Uploading ${deb}"
+            curl -fsSL -X POST \
+              -H "Authorization: Bearer ${APTUARY_API_KEY}" \
+              -F "file=@${deb}" \
+              "${BASE}/api/v1/upload?${QUERY}"
+          done
