@@ -18,7 +18,8 @@ sudo apt-get update -qq
 sudo apt-get install -y -qq ${LINUX_PACKAGES}
 
 echo "==> Installing Wails v2 CLI..."
-CGO_ENABLED=0 go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+WAILS_VERSION="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
+CGO_ENABLED=0 go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_VERSION}"
 export PATH="$(go env GOPATH)/bin:${PATH}"
 
 echo "==> Setting product version..."
