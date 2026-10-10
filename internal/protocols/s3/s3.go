@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	appcfg "goexplore/internal/config"
@@ -35,12 +35,12 @@ func (e *S3Explorer) Connect() error {
 	}
 
 	creds := credentials.NewStaticCredentialsProvider(e.cfg.Username, e.secret, "")
-	
+
 	optFns := []func(*config.LoadOptions) error{
 		config.WithCredentialsProvider(creds),
 		config.WithRegion(region),
 	}
-	
+
 	awsCfg, err := config.LoadDefaultConfig(context.TODO(), optFns...)
 	if err != nil {
 		return err
@@ -133,12 +133,12 @@ func (e *S3Explorer) ListDir(path string) ([]explorer.FileEntry, error) {
 	for _, cp := range result.CommonPrefixes {
 		name := strings.TrimSuffix(*cp.Prefix, "/")
 		name = filepath.Base(name)
-		
+
 		fullPath := *cp.Prefix
 		if e.cfg.Bucket == "" {
 			fullPath = bucketName + "/" + *cp.Prefix
 		}
-		
+
 		entries = append(entries, explorer.FileEntry{
 			Name:        name,
 			Path:        fullPath,
@@ -152,12 +152,12 @@ func (e *S3Explorer) ListDir(path string) ([]explorer.FileEntry, error) {
 			continue
 		}
 		name := filepath.Base(*obj.Key)
-		
+
 		fullPath := *obj.Key
 		if e.cfg.Bucket == "" {
 			fullPath = bucketName + "/" + *obj.Key
 		}
-		
+
 		entries = append(entries, explorer.FileEntry{
 			Name:        name,
 			Path:        fullPath,
@@ -181,7 +181,7 @@ func (e *S3Explorer) Stat(path string) (explorer.FileEntry, error) {
 	if err != nil {
 		return explorer.FileEntry{}, err
 	}
-	
+
 	if subpath == "" {
 		return explorer.FileEntry{
 			Name: bucket, Path: bucketName, IsDir: true,
@@ -195,18 +195,18 @@ func (e *S3Explorer) Stat(path string) (explorer.FileEntry, error) {
 	head, err := e.client.HeadObject(context.TODO(), input)
 	if err != nil {
 		return explorer.FileEntry{
-			Name: filepath.Base(subpath),
-			Path: path,
+			Name:  filepath.Base(subpath),
+			Path:  path,
 			IsDir: true,
 		}, nil
 	}
 
 	return explorer.FileEntry{
-		Name:        filepath.Base(subpath),
-		Path:        path,
-		Size:        *head.ContentLength,
-		Modified:    head.LastModified.Format(time.RFC3339),
-		IsDir:       false,
+		Name:     filepath.Base(subpath),
+		Path:     path,
+		Size:     *head.ContentLength,
+		Modified: head.LastModified.Format(time.RFC3339),
+		IsDir:    false,
 	}, nil
 }
 
@@ -215,7 +215,7 @@ func (e *S3Explorer) MkDir(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if subpath == "" {
 		_, err := e.client.CreateBucket(context.TODO(), &s3.CreateBucketInput{
 			Bucket: aws.String(bucket),
@@ -239,14 +239,14 @@ func (e *S3Explorer) Delete(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if subpath == "" {
 		_, err := e.client.DeleteBucket(context.TODO(), &s3.DeleteBucketInput{
 			Bucket: aws.String(bucket),
 		})
 		return err
 	}
-	
+
 	// Try to delete the exact object (might be a file or a folder marker)
 	_, err = e.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket),
@@ -300,7 +300,7 @@ func (e *S3Explorer) Delete(path string) error {
 			break
 		}
 	}
-	
+
 	return nil
 }
 
@@ -313,20 +313,20 @@ func (e *S3Explorer) Rename(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if bucket1 != bucket2 {
 		return fmt.Errorf("cross-bucket rename not supported")
 	}
 
 	_, err = e.client.CopyObject(context.TODO(), &s3.CopyObjectInput{
-		Bucket: aws.String(bucket2),
+		Bucket:     aws.String(bucket2),
 		CopySource: aws.String(fmt.Sprintf("%s/%s", bucket1, subpath1)),
-		Key: aws.String(subpath2),
+		Key:        aws.String(subpath2),
 	})
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = e.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
 		Bucket: aws.String(bucket1),
 		Key:    aws.String(subpath1),
@@ -354,13 +354,19 @@ func (e *S3Explorer) WriteFile(path string, r io.Reader, size int64) error {
 	if err != nil {
 		return err
 	}
-	
-	uploader := manager.NewUploader(e.client)
-	_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
+
+	uploader := transfermanager.New(e.client, func(o *transfermanager.Options) {
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+	})
+	input := &transfermanager.UploadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(subpath),
 		Body:   r,
-	})
+	}
+	if size > 0 {
+		input.ContentLength = aws.Int64(size)
+	}
+	_, err = uploader.UploadObject(context.TODO(), input)
 	return err
 }
 
@@ -369,7 +375,7 @@ func (e *S3Explorer) Checksum(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	if subpath == "" {
 		return "", fmt.Errorf("cannot calculate checksum of bucket")
 	}

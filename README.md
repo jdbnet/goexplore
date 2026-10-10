@@ -66,7 +66,7 @@ GoExplore is built using [Wails v2](https://wails.io/) and Vanilla JS.
 
 ### Build Instructions
 
-1. Ensure Go 1.26 and Node.js are installed.
+1. Ensure Go 1.27.1 and Node.js are installed.
 2. Install the Wails v2 CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 3. Run the development server with live reload:
    ```bash
