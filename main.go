@@ -103,7 +103,26 @@ func installedUnderUsr(exe string) bool {
 	return false
 }
 
+// WebKitGTK enables Wayland explicit sync but does not set an acquire point.
+// KWin then closes the connection: "Error 71 (Protocol error) dispatching to Wayland display".
+// Disabling NVIDIA explicit sync keeps the DMA-BUF renderer working on Plasma.
+func applyWaylandNVIDIAWorkaround() {
+	if runtime.GOOS != "linux" {
+		return
+	}
+	if os.Getenv("XDG_SESSION_TYPE") != "wayland" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		return
+	}
+	if _, err := os.Stat("/sys/module/nvidia"); err != nil {
+		return
+	}
+	if os.Getenv("__NV_DISABLE_EXPLICIT_SYNC") == "" {
+		_ = os.Setenv("__NV_DISABLE_EXPLICIT_SYNC", "1")
+	}
+}
+
 func main() {
+	applyWaylandNVIDIAWorkaround()
 	installLinux()
 
 	// Create an instance of the app structure
