@@ -51,8 +51,10 @@ func installLinux() {
 	targetDir := filepath.Join(home, ".local", "bin")
 	targetExe := filepath.Join(targetDir, "goexplore")
 
-	// If we are already running from the target path, do nothing.
+	// Already installed. Refresh the menu entry so it keeps the WebKit workaround.
 	if exe == targetExe {
+		iconPath := filepath.Join(home, ".local", "share", "icons", "goexplore.png")
+		writeDesktopEntry(targetExe, iconPath)
 		return
 	}
 
@@ -71,17 +73,7 @@ func installLinux() {
 	iconPath := filepath.Join(iconDir, "goexplore.png")
 	os.WriteFile(iconPath, icon, 0644)
 
-	// Write the desktop shortcut file
-	appDir := filepath.Join(home, ".local", "share", "applications")
-	os.MkdirAll(appDir, 0755)
-	desktopContent := fmt.Sprintf(`[Desktop Entry]
-Name=GoExplore
-Exec=%s
-Icon=%s
-Type=Application
-Terminal=false
-Categories=Utility;FileTools;`, targetExe, iconPath)
-	os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
+	writeDesktopEntry(targetExe, iconPath)
 
 	// Execute the newly installed binary and exit the current running process
 	cmd := exec.Command(targetExe)
@@ -103,9 +95,32 @@ func installedUnderUsr(exe string) bool {
 	return false
 }
 
+func writeDesktopEntry(targetExe, iconPath string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	appDir := filepath.Join(home, ".local", "share", "applications")
+	if err := os.MkdirAll(appDir, 0755); err != nil {
+		return
+	}
+	// env= runs before the process starts. A menu launch otherwise inherits Plasma's
+	// NVIDIA explicit-sync setting, and WebKit's DMA-BUF renderer flashes black.
+	desktopContent := fmt.Sprintf(`[Desktop Entry]
+Name=GoExplore
+Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 %s
+Icon=%s
+Type=Application
+Terminal=false
+Categories=Utility;FileTools;
+StartupNotify=false
+`, targetExe, iconPath)
+	_ = os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
+}
+
 // WebKitGTK enables Wayland explicit sync but does not set an acquire point.
-// KWin then closes the connection: "Error 71 (Protocol error) dispatching to Wayland display".
-// Disabling NVIDIA explicit sync keeps the DMA-BUF renderer working on Plasma.
+// KWin then closes the connection, or the window flashes black, on NVIDIA.
+// Force the workaround even if the desktop launcher already set the variable.
 func applyWaylandNVIDIAWorkaround() {
 	if runtime.GOOS != "linux" {
 		return
@@ -116,9 +131,7 @@ func applyWaylandNVIDIAWorkaround() {
 	if _, err := os.Stat("/sys/module/nvidia"); err != nil {
 		return
 	}
-	if os.Getenv("__NV_DISABLE_EXPLICIT_SYNC") == "" {
-		_ = os.Setenv("__NV_DISABLE_EXPLICIT_SYNC", "1")
-	}
+	_ = os.Setenv("__NV_DISABLE_EXPLICIT_SYNC", "1")
 }
 
 func main() {
@@ -144,6 +157,9 @@ func main() {
 		},
 		Linux: &linux.Options{
 			Icon: icon,
+			// A non-nil Linux options value defaults GPU policy to OnDemand.
+			// On NVIDIA Wayland that accelerated WebKit surface flashes black.
+			WebviewGpuPolicy: linux.WebviewGpuPolicyNever,
 		},
 	})
 
