@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hirochachacha/go-smb2 v1.1.0
 	github.com/jlaffaye/ftp v0.2.4
-	github.com/pkg/sftp v1.13.11
+	github.com/pkg/sftp v1.13.12
 	github.com/studio-b12/gowebdav v0.13.0
 	github.com/vmware/go-nfs-client v0.0.0-20190605212624-d43b92724c1b
 	github.com/wailsapp/wails/v2 v2.16.0
