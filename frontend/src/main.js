@@ -1,4 +1,23 @@
-import { GetVersion, ListDir, GetConnections, GetConnectionSecretKind, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers, ReorderConnections } from '../wailsjs/go/main/App.js';
+import { System } from "@wailsio/runtime";
+import { App } from "../bindings/goexplore/index.js";
+
+const {
+    GetVersion,
+    ListDir,
+    GetConnections,
+    GetConnectionSecretKind,
+    SaveConnection,
+    DeleteConnection,
+    Delete,
+    Rename,
+    PromptUploadFiles,
+    PromptUploadDirectory,
+    PromptDownload,
+    TransferItems,
+    GetTransfers,
+    ClearTransfers,
+    ReorderConnections,
+} = App;
 
 let currentConn = 'local';
 let currentPath = '';
@@ -33,12 +52,14 @@ window.toggleTheme = () => {
 
 async function init() {
     syncThemeButton();
-    if (window.runtime && window.runtime.Environment) {
-        const env = await window.runtime.Environment();
-        if (env.platform === 'windows') {
+    try {
+        const env = await System.Environment();
+        if (env.OS === "windows") {
             const nfsOpt = document.querySelector('#conn-protocol option[value="nfs"]');
             if (nfsOpt) nfsOpt.remove();
         }
+    } catch (_) {
+        /* not running in desktop shell */
     }
 
     try {

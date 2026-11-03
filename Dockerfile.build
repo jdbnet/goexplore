@@ -1,22 +1,22 @@
 FROM golang:1.27.3-bookworm
 
-# Install required system dependencies for Wails, GTK, WebKit, and MinGW for cross-compiling
+# Wails v3: GTK 4 and WebKitGTK 6
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     mingw-w64 \
     nsis \
-    libgtk-3-dev \
-    libwebkit2gtk-4.1-dev \
+    libgtk-4-dev \
+    libwebkitgtk-6.0-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+# Install Node.js 26
+RUN curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Wails CLI
-RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+# Install Wails v3 CLI
+RUN go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
 
 ENV PATH="$PATH:/go/bin"
 

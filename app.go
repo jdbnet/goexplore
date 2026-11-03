@@ -20,10 +20,11 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type App struct {
+	wailsApp        *application.App
 	ctx             context.Context
 	cfg             *config.Config
 	transferManager *transfer.Manager
@@ -46,8 +47,10 @@ func NewApp() *App {
 	}
 }
 
-func (a *App) startup(ctx context.Context) {
+func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	a.ctx = ctx
+	a.wailsApp = application.Get()
+	return nil
 }
 
 func (a *App) GetVersion() string {
@@ -279,9 +282,11 @@ func (a *App) Rename(connId, src, dst string) error {
 }
 
 func (a *App) PromptUploadFiles(connId, destPath string) error {
-	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Files to Upload",
-	})
+	files, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:                   "Select Files to Upload",
+		CanChooseFiles:          true,
+		AllowsMultipleSelection: true,
+	}).PromptForMultipleSelection()
 	if err != nil {
 		return err
 	}
@@ -308,9 +313,11 @@ func (a *App) PromptUploadFiles(connId, destPath string) error {
 }
 
 func (a *App) PromptUploadDirectory(connId, destPath string) error {
-	dir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Directory to Upload",
-	})
+	dir, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:                "Select Directory to Upload",
+		CanChooseDirectories: true,
+		CanChooseFiles:       false,
+	}).PromptForSingleSelection()
 	if err != nil || dir == "" {
 		return err
 	}
@@ -349,10 +356,10 @@ func (a *App) PromptUploadDirectory(connId, destPath string) error {
 
 func (a *App) PromptDownload(connId, remotePath string) error {
 	fileName := filepath.Base(remotePath)
-	localPath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Save File",
-		DefaultFilename: fileName,
-	})
+	localPath, err := a.wailsApp.Dialog.SaveFileWithOptions(&application.SaveFileDialogOptions{
+		Title:    "Save File",
+		Filename: fileName,
+	}).PromptForSingleSelection()
 	if err != nil || localPath == "" {
 		return err
 	}

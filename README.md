@@ -62,18 +62,20 @@ Or download the binary from [GitHub Releases](https://github.com/jdbnet/goexplor
 
 ## 🛠 For Developers
 
-GoExplore is built using [Wails v2](https://wails.io/) and Vanilla JS.
+GoExplore is built using [Wails v3](https://v3.wails.io/) and Vanilla JS.
 
 ### Build Instructions
 
 1. Ensure Go 1.27.3 and Node.js are installed.
-2. Install the Wails v2 CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-3. Run the development server with live reload:
+2. Install the Wails v3 CLI: `go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`
+3. Install Linux build deps (GTK 4, WebKitGTK 6): e.g. on Debian/Ubuntu, `libgtk-4-dev` and `libwebkitgtk-6.0-dev`.
+4. Generate build assets once (if `Taskfile.yml` is missing): `wails3 update build-assets -name GoExplore -binaryname goexplore -config ./wails.json -dir build`
+5. Run the development server with live reload:
    ```bash
-   wails dev -tags webkit2_41
+   wails3 dev
    ```
-4. To compile a production binary, use:
+6. To compile a production binary, use:
    ```bash
-   wails build -tags webkit2_41
+   wails3 build
    ```
-   *(The output will be placed in the `build/bin/` directory).*
+   *(Binaries are written to the `bin/` directory.)*

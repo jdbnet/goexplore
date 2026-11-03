@@ -9,10 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 //go:embed all:frontend/dist
@@ -138,32 +135,36 @@ func main() {
 	applyWaylandNVIDIAWorkaround()
 	installLinux()
 
-	// Create an instance of the app structure
-	app := NewApp()
+	appService := NewApp()
 
-	// Create application with options
-	err := wails.Run(&options.App{
-		Title:            "GoExplore",
-		Width:            1024,
-		Height:           768,
-		WindowStartState: options.Normal,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+	wailsApp := application.New(application.Options{
+		Name:        "GoExplore",
+		Description: "Multi-protocol file explorer",
+		Icon:        icon,
+		Services: []application.Service{
+			application.NewService(appService),
 		},
-		BackgroundColour: &options.RGBA{R: 10, G: 10, B: 10, A: 1},
-		OnStartup:        app.startup,
-		Bind: []interface{}{
-			app,
+		Assets: application.AssetOptions{
+			Handler: application.BundledAssetFileServer(assets),
 		},
-		Linux: &linux.Options{
-			Icon: icon,
-			// A non-nil Linux options value defaults GPU policy to OnDemand.
-			// On NVIDIA Wayland that accelerated WebKit surface flashes black.
-			WebviewGpuPolicy: linux.WebviewGpuPolicyNever,
+		Linux: application.LinuxOptions{
+			ProgramName:   "goexplore",
+			ApplicationID: "net.jdbnet.goexplore",
+		},
+		Mac: application.MacOptions{
+			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 	})
 
-	if err != nil {
+	wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "GoExplore",
+		Width:            1024,
+		Height:           768,
+		BackgroundColour: application.NewRGB(10, 10, 10),
+		URL:              "/",
+	})
+
+	if err := wailsApp.Run(); err != nil {
 		println("Error:", err.Error())
 	}
 }

@@ -9,7 +9,7 @@ permissions:
 env:
   APTUARY_DISTRIBUTION: stable
   APTUARY_COMPONENT: main
-  NODE_VERSION: "22"
+  NODE_VERSION: "26"
 
 jobs:
   version:
