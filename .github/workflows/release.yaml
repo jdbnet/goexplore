@@ -26,7 +26,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-  publish:
+  prepare:
     needs: version
     if: needs.version.outputs.version != ''
     runs-on: ubuntu-latest
@@ -44,11 +44,104 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Build Linux, Windows, and Debian package
+      - name: Prepare frontend and bindings
         env:
           VERSION: ${{ needs.version.outputs.version }}
-        run: bash scripts/ci-build-amd64.sh
+        run: bash scripts/ci-prepare.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          retention-days: 1
+          path: |
+            frontend/dist
+            frontend/bindings
+
+  build-linux:
+    needs: [version, prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.version.outputs.version }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build Linux binary and Debian package
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci-build-linux.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64
+          retention-days: 1
+          path: |
+            dist/goexplore-linux-amd64
+            dist/goexplore_*_amd64.deb
+
+  build-windows:
+    needs: [version, prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: v${{ needs.version.outputs.version }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Windows installer
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci-build-windows.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          retention-days: 1
+          path: dist/goexplore-windows-installer.exe
+
+  release:
+    needs: [version, build-linux, build-windows]
+    if: needs.version.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-amd64
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64
+          path: dist
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
