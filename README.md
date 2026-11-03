@@ -51,12 +51,13 @@ sudo apt install goexplore
 
 The package installs GoExplore to `/usr/bin/goexplore` and adds a desktop entry.
 
-Or download the binary from [GitHub Releases](https://github.com/jdbnet/goexplore/releases/latest):
+Or download from [GitHub Releases](https://github.com/jdbnet/goexplore/releases/latest) (keep `goexplore-linux-amd64`, `goexplore.png`, and `GoExplore.desktop` in the same folder):
 
-1. Download `goexplore-linux-amd64`.
-2. Give the file executable permissions: `chmod +x goexplore-linux-amd64`
-3. Run the binary.
-4. **GoExplore** will copy itself into your application launcher and create a desktop shortcut. You can delete the downloaded file afterward.
+1. Download `goexplore-linux-amd64` (and optionally `goexplore.png` + `GoExplore.desktop` from the same release).
+2. `chmod +x goexplore-linux-amd64`
+3. Run the binary once. It installs to `~/.local/bin/goexplore`, refreshes `~/.local/share/applications/goexplore.desktop`, and writes `GoExplore.desktop` + `goexplore.png` next to the download.
+4. **Launch from the app menu or by opening `GoExplore.desktop`.** On KDE/Wayland, double-clicking the raw binary often shows the generic Wails taskbar icon even though the app icon files are installed correctly.
+5. You can delete the downloaded binary afterward; use the menu entry or `~/.local/bin/goexplore`.
 
 ---
 

@@ -27,6 +27,12 @@ contents:
     dst: /usr/share/icons/hicolor/128x128/apps/goexplore.png
   - src: build/appicon.png
     dst: /usr/share/icons/hicolor/256x256/apps/goexplore.png
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/48x48/apps/uk.co.jdbnet.goexplore.png
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/128x128/apps/uk.co.jdbnet.goexplore.png
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/256x256/apps/uk.co.jdbnet.goexplore.png
 
 scripts:
   postinstall: ./packaging/linux/postinstall.sh

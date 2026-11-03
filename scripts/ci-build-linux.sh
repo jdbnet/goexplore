@@ -34,4 +34,14 @@ CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags production -trimpath -ldfla
 echo "==> Building Debian package..."
 bash scripts/ci-deb.sh amd64
 
-ls -lh "${OUTDIR}/goexplore-linux-amd64" "${OUTDIR}"/goexplore_"${VERSION}"_*.deb
+echo "==> Portable Linux launcher (KDE taskbar icon when not using menu install)..."
+cp build/appicon.png "${OUTDIR}/goexplore.png"
+portable_desktop="${OUTDIR}/GoExplore.desktop"
+sed \
+  -e 's|@EXEC@|./goexplore-linux-amd64|g' \
+  -e 's|@ICON@|./goexplore.png|g' \
+  packaging/linux/GoExplore-portable.desktop >"${portable_desktop}.tmp"
+mv "${portable_desktop}.tmp" "${portable_desktop}"
+
+ls -lh "${OUTDIR}/goexplore-linux-amd64" "${OUTDIR}"/goexplore_"${VERSION}"_*.deb \
+  "${OUTDIR}/goexplore.png" "${OUTDIR}/GoExplore.desktop"

@@ -21,9 +21,14 @@ var icon []byte
 var Version string = "dev"
 
 const (
-	linuxApplicationID = "uk.co.jdbnet.goexplore"
-	linuxIconName      = "goexplore"
+	linuxApplicationID  = "uk.co.jdbnet.goexplore"
+	linuxIconThemeName  = "uk.co.jdbnet.goexplore"
+	linuxIconLegacyName = "goexplore"
 )
+
+func linuxIconPath(home string) string {
+	return filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", linuxIconThemeName+".png")
+}
 
 func installLinuxIcon(home string) {
 	for _, size := range []string{"48x48", "128x128", "256x256"} {
@@ -31,12 +36,43 @@ func installLinuxIcon(home string) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			continue
 		}
-		_ = os.WriteFile(filepath.Join(dir, linuxIconName+".png"), icon, 0644)
+		for _, name := range []string{linuxIconThemeName, linuxIconLegacyName} {
+			_ = os.WriteFile(filepath.Join(dir, name+".png"), icon, 0644)
+		}
 	}
 	if cache, err := exec.LookPath("gtk-update-icon-cache"); err == nil {
 		hicolor := filepath.Join(home, ".local", "share", "icons", "hicolor")
 		_ = exec.Command(cache, "-f", "-t", hicolor).Run()
 	}
+}
+
+func refreshLinuxDesktopDatabase(home string) {
+	if upd, err := exec.LookPath("update-desktop-database"); err == nil {
+		appDir := filepath.Join(home, ".local", "share", "applications")
+		_ = exec.Command(upd, appDir).Run()
+	}
+}
+
+// Sidecar launcher for the release binary (e.g. ~/Downloads). KDE on Wayland does not
+// use hicolor icons for raw executables; it needs a .desktop with an absolute Icon path.
+func writePortableDesktop(sourceExe string) {
+	dir := filepath.Dir(sourceExe)
+	iconFile := filepath.Join(dir, "goexplore.png")
+	_ = os.WriteFile(iconFile, icon, 0644)
+	desktopPath := filepath.Join(dir, "GoExplore.desktop")
+	desktopContent := fmt.Sprintf(`[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GoExplore
+Comment=File manager for local and remote storage
+Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 %s
+Icon=%s
+Terminal=false
+Categories=Utility;FileTools;
+StartupNotify=false
+StartupWMClass=%s
+`, sourceExe, iconFile, linuxApplicationID)
+	_ = os.WriteFile(desktopPath, []byte(desktopContent), 0644)
 }
 
 func installLinux() {
@@ -70,9 +106,12 @@ func installLinux() {
 	// Already installed. Refresh the menu entry so it keeps the WebKit workaround.
 	if exe == targetExe {
 		installLinuxIcon(home)
-		writeDesktopEntry(targetExe)
+		writeDesktopEntry(home, targetExe)
+		refreshLinuxDesktopDatabase(home)
 		return
 	}
+
+	writePortableDesktop(exe)
 
 	// Ensure target directories exist
 	os.MkdirAll(targetDir, 0755)
@@ -84,7 +123,8 @@ func installLinux() {
 	}
 
 	installLinuxIcon(home)
-	writeDesktopEntry(targetExe)
+	writeDesktopEntry(home, targetExe)
+	refreshLinuxDesktopDatabase(home)
 
 	// Execute the newly installed binary and exit the current running process
 	cmd := exec.Command(targetExe)
@@ -106,29 +146,28 @@ func installedUnderUsr(exe string) bool {
 	return false
 }
 
-func writeDesktopEntry(targetExe string) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return
-	}
+func writeDesktopEntry(home, targetExe string) {
 	appDir := filepath.Join(home, ".local", "share", "applications")
 	if err := os.MkdirAll(appDir, 0755); err != nil {
 		return
 	}
+	iconPath := linuxIconPath(home)
 	// env= runs before the process starts. A menu launch otherwise inherits Plasma's
 	// NVIDIA explicit-sync setting, and WebKit's DMA-BUF renderer flashes black.
-	// GTK4 taskbar icons come from the .desktop Icon= theme name and StartupWMClass
-	// matching the Wayland app id (Options.Linux.ApplicationID), not Options.Icon.
+	// GTK4 taskbar icons come from the .desktop file (absolute Icon= is most reliable
+	// on KDE) and StartupWMClass matching the Wayland app id, not Options.Icon.
 	desktopContent := fmt.Sprintf(`[Desktop Entry]
+Version=1.0
+Type=Application
 Name=GoExplore
+Comment=File manager for local and remote storage
 Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 %s
 Icon=%s
-Type=Application
 Terminal=false
 Categories=Utility;FileTools;
 StartupNotify=false
 StartupWMClass=%s
-`, targetExe, linuxIconName, linuxApplicationID)
+`, targetExe, iconPath, linuxApplicationID)
 	_ = os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
 }
 

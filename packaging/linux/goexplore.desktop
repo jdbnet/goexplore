@@ -4,7 +4,7 @@ Type=Application
 Name=GoExplore
 Comment=File manager for local and remote storage
 Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 goexplore
-Icon=goexplore
+Icon=uk.co.jdbnet.goexplore
 Terminal=false
 Categories=Utility;FileTools;
 StartupNotify=false

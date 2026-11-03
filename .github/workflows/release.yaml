@@ -91,6 +91,8 @@ jobs:
           path: |
             dist/goexplore-linux-amd64
             dist/goexplore_*_amd64.deb
+            dist/goexplore.png
+            dist/GoExplore.desktop
 
   build-windows:
     needs: [version, prepare]
@@ -153,6 +155,8 @@ jobs:
             dist/goexplore-linux-amd64
             dist/goexplore-windows-installer.exe
             dist/goexplore_*_amd64.deb
+            dist/goexplore.png
+            dist/GoExplore.desktop
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
