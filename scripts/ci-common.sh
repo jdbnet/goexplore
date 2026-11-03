@@ -53,6 +53,10 @@ ensure_build_assets() {
 sync_app_icons() {
   echo "==> Syncing app icon..."
   cp frontend/src/assets/appicon.png build/appicon.png
+  if ! command -v wails3 >/dev/null 2>&1; then
+    echo "==> wails3 not installed; skipping .ico/.icns generation (Linux-only builds)"
+    return 0
+  fi
   (
     cd build
     wails3 generate icons -input appicon.png \
