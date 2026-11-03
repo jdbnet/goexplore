@@ -11,6 +11,7 @@ export namespace config {
 	    path_style?: boolean;
 	    secure?: boolean;
 	    username?: string;
+	    sftp_key_auth?: boolean;
 	    keychain_key?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -29,6 +30,7 @@ export namespace config {
 	        this.path_style = source["path_style"];
 	        this.secure = source["secure"];
 	        this.username = source["username"];
+	        this.sftp_key_auth = source["sftp_key_auth"];
 	        this.keychain_key = source["keychain_key"];
 	    }
 	}

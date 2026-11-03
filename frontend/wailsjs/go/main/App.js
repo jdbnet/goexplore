@@ -22,6 +22,10 @@ export function GetConnections() {
   return window['go']['main']['App']['GetConnections']();
 }
 
+export function GetConnectionSecretKind(arg1) {
+  return window['go']['main']['App']['GetConnectionSecretKind'](arg1);
+}
+
 export function GetTransfers() {
   return window['go']['main']['App']['GetTransfers']();
 }

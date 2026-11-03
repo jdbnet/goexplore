@@ -18,6 +18,8 @@ type ConnectionConfig struct {
 	PathStyle   bool   `yaml:"path_style,omitempty" json:"path_style,omitempty"`
 	Secure      bool   `yaml:"secure,omitempty" json:"secure,omitempty"`
 	Username    string `yaml:"username,omitempty" json:"username,omitempty"`
+	// SftpKeyAuth is true when the connection uses an SSH private key (not password).
+	SftpKeyAuth bool `yaml:"sftp_key_auth,omitempty" json:"sftp_key_auth,omitempty"`
 	KeychainKey string `yaml:"keychain_key,omitempty" json:"keychain_key,omitempty"`
 }
 

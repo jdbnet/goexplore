@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"goexplore/internal/config"
 	"goexplore/internal/explorer"
 	"goexplore/internal/keychain"
@@ -60,12 +61,30 @@ func (a *App) GetConnections() []config.ConnectionConfig {
 	return a.cfg.Connections
 }
 
+// GetConnectionSecretKind reports whether the stored credential looks like an SSH key or password.
+func (a *App) GetConnectionSecretKind(id string) string {
+	secret, err := keychain.GetSecret(id)
+	if err != nil || strings.TrimSpace(secret) == "" {
+		return "none"
+	}
+	secret = strings.ReplaceAll(strings.TrimSpace(secret), "\\n", "\n")
+	if strings.Contains(secret, "-----BEGIN") {
+		return "key"
+	}
+	return "password"
+}
+
 func (a *App) SaveConnection(c config.ConnectionConfig, secret string) error {
 	if c.ID == "" {
 		return fmt.Errorf("connection ID cannot be empty")
 	}
 
 	if secret != "" {
+		if c.Protocol == "sftp" {
+			trimmed := strings.TrimSpace(secret)
+			trimmed = strings.ReplaceAll(trimmed, "\\n", "\n")
+			c.SftpKeyAuth = strings.Contains(trimmed, "-----BEGIN")
+		}
 		err := keychain.SetSecret(c.ID, secret)
 		if err != nil {
 			return err

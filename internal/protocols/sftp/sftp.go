@@ -91,6 +91,29 @@ func (e *SFTPExplorer) Connect() error {
 	return nil
 }
 
+func (e *SFTPExplorer) defaultRemotePath() string {
+	if p := strings.TrimSpace(e.cfg.Bucket); p != "" {
+		return filepath.ToSlash(p)
+	}
+	if e.client != nil {
+		if wd, err := e.client.Getwd(); err == nil {
+			wd = strings.TrimSpace(wd)
+			if wd != "" {
+				return filepath.ToSlash(wd)
+			}
+		}
+	}
+	return "/"
+}
+
+func (e *SFTPExplorer) normalizePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || path == "." {
+		return e.defaultRemotePath()
+	}
+	return filepath.ToSlash(path)
+}
+
 func (e *SFTPExplorer) Disconnect() error {
 	if e.client != nil {
 		e.client.Close()
@@ -102,15 +125,7 @@ func (e *SFTPExplorer) Disconnect() error {
 }
 
 func (e *SFTPExplorer) ListDir(path string) ([]explorer.FileEntry, error) {
-	if path == "" {
-		if e.cfg.Bucket != "" {
-			path = e.cfg.Bucket
-		} else {
-			path = "/"
-		}
-	} else if path == "." {
-		path = "/"
-	}
+	path = e.normalizePath(path)
 
 	files, err := e.client.ReadDir(path)
 
@@ -133,9 +148,7 @@ func (e *SFTPExplorer) ListDir(path string) ([]explorer.FileEntry, error) {
 }
 
 func (e *SFTPExplorer) Stat(path string) (explorer.FileEntry, error) {
-	if path == "" {
-		path = "."
-	}
+	path = e.normalizePath(path)
 	f, err := e.client.Stat(path)
 	if err != nil {
 		return explorer.FileEntry{}, err

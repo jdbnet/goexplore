@@ -1,4 +1,4 @@
-import { GetVersion, ListDir, GetConnections, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers, ReorderConnections } from '../wailsjs/go/main/App.js';
+import { GetVersion, ListDir, GetConnections, GetConnectionSecretKind, SaveConnection, DeleteConnection, Delete, Rename, PromptUploadFiles, PromptUploadDirectory, PromptDownload, TransferItems, GetTransfers, ClearTransfers, ReorderConnections } from '../wailsjs/go/main/App.js';
 
 let currentConn = 'local';
 let currentPath = '';
@@ -66,6 +66,9 @@ async function init() {
             secure: document.getElementById('conn-secure').checked,
             username: document.getElementById('conn-username').value
         };
+        if (conn.protocol === 'sftp') {
+            conn.sftp_key_auth = document.getElementById('conn-sftp-auth-type').value === 'key';
+        }
         let secret = document.getElementById('conn-secret').value;
         if (conn.protocol === 'sftp' && document.getElementById('conn-sftp-auth-type').value === 'key') {
             secret = document.getElementById('conn-secret-key').value;
@@ -158,7 +161,7 @@ window.switchConn = async (id) => {
     await loadDirectory(currentConn, currentPath);
 };
 
-window.editConnection = (id) => {
+window.editConnection = async (id) => {
     const c = connectionsCache.find(conn => conn.id === id);
     if (!c) return;
     document.getElementById('modal-title').innerText = "Edit Connection";
@@ -174,8 +177,23 @@ window.editConnection = (id) => {
     document.getElementById('conn-username').value = c.username || '';
     document.getElementById('conn-secret').value = '';
     document.getElementById('conn-secret-key').value = '';
-    document.getElementById('conn-sftp-auth-type').value = 'password';
+    document.getElementById('conn-secret-key').placeholder = '-----BEGIN OPENSSH PRIVATE KEY-----';
+    document.getElementById('conn-sftp-auth-type').value = c.sftp_key_auth ? 'key' : 'password';
     document.getElementById('conn-delete-btn').style.display = 'block';
+
+    if (c.protocol === 'sftp') {
+        try {
+            const kind = await GetConnectionSecretKind(id);
+            if (kind === 'key') {
+                document.getElementById('conn-sftp-auth-type').value = 'key';
+                document.getElementById('conn-secret-key').placeholder = 'Key stored in keychain; paste only to replace';
+            } else if (kind === 'password') {
+                document.getElementById('conn-sftp-auth-type').value = 'password';
+            }
+        } catch (_) {
+            /* ignore */
+        }
+    }
 
     updateProtocolFields();
     document.getElementById('conn-modal').style.display = 'flex';
@@ -201,17 +219,29 @@ window.closeConnModal = () => {
 window.updateProtocolFields = () => {
     const protocol = document.getElementById('conn-protocol').value;
 
-    const showBucket = protocol === 's3' || protocol === 'smb' || protocol === 'nfs';
+    const showBucket = protocol === 's3' || protocol === 'smb' || protocol === 'nfs' || protocol === 'sftp';
     document.getElementById('bucket-fields').style.display = showBucket ? 'block' : 'none';
 
     const bucketLabel = document.getElementById('bucket-label');
+    const bucketInput = document.getElementById('conn-bucket');
     if (bucketLabel) {
         if (protocol === 'nfs') {
             bucketLabel.innerText = 'Export Path';
         } else if (protocol === 'smb') {
             bucketLabel.innerText = 'Share';
+        } else if (protocol === 'sftp') {
+            bucketLabel.innerText = 'Remote path (optional)';
         } else {
             bucketLabel.innerText = 'Bucket';
+        }
+    }
+    if (bucketInput) {
+        if (protocol === 'sftp') {
+            bucketInput.placeholder = '/home (leave empty to use server home)';
+        } else if (protocol === 'nfs') {
+            bucketInput.placeholder = '';
+        } else {
+            bucketInput.placeholder = 'my-bucket-or-share';
         }
     }
 
@@ -284,6 +314,13 @@ async function loadDirectory(connId, path) {
         lastSelectedPath = null;
 
         let displayFiles = files || [];
+        if ((!path || path === '/') && displayFiles.length > 0 && displayFiles[0].path) {
+            const first = displayFiles[0].path;
+            const slash = first.lastIndexOf('/');
+            if (slash > 0) {
+                document.getElementById('breadcrumb').innerText = first.slice(0, slash);
+            }
+        }
         if (!showHiddenFiles) {
             displayFiles = displayFiles.filter(f => !f.name.startsWith('.'));
         }
