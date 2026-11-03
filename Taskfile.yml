@@ -9,6 +9,7 @@ includes:
 vars:
   APP_NAME: "goexplore"
   BIN_DIR: "bin"
+  PACKAGE_MANAGER: "npm"
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 
 tasks:
