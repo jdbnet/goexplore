@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=GoExplore
+Comment=My Product Description
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/goexplore %u
+Terminal=false
+Type=Application
+Icon=goexplore
+Categories=Utility;
+StartupWMClass=goexplore
+
+ 

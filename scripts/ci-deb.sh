@@ -11,8 +11,24 @@ fi
 OUTDIR="${OUTDIR:-dist}"
 mkdir -p "${OUTDIR}"
 
+export GOPROXY="${GOPROXY:-https://proxy.golang.org,direct}"
+
+retry() {
+  local attempts=$1
+  shift
+  local n=1
+  until "$@"; do
+    if [ "$n" -ge "$attempts" ]; then
+      return 1
+    fi
+    n=$((n + 1))
+    echo "Command failed (attempt ${n}/${attempts}), retrying..." >&2
+    sleep 3
+  done
+}
+
 if ! command -v nfpm >/dev/null 2>&1; then
-  go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
+  retry 3 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
   export PATH="$(go env GOPATH)/bin:${PATH}"
 fi
 

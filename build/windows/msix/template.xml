@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="goexplore"
+        Arguments=""
+        InstallLocation="C:\Program Files\JDB-NET Limited\GoExplore">
+    </Installer>
+    <PackageInformation
+        PackageName="GoExplore"
+        PackageDisplayName="GoExplore"
+        PublisherName="CN=JDB-NET Limited"
+        PublisherDisplayName="JDB-NET Limited"
+        Version="0.0.0.0"
+        PackageDescription="My Product Description">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.wails.goexplore"
+                Description="My Product Description"
+                DisplayName="GoExplore"
+                ExecutableName="goexplore"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>GoExplore</DisplayName>
+            <PublisherDisplayName>JDB-NET Limited</PublisherDisplayName>
+            <Description>My Product Description</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="goexplore.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

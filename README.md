@@ -69,12 +69,13 @@ GoExplore is built using [Wails v3](https://v3.wails.io/) and Vanilla JS.
 1. Ensure Go 1.27.3 and Node.js are installed.
 2. Install the Wails v3 CLI: `go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`
 3. Install Linux build deps (GTK 4, WebKitGTK 6): e.g. on Debian/Ubuntu, `libgtk-4-dev` and `libwebkitgtk-6.0-dev`.
-4. Generate build assets once (if `Taskfile.yml` is missing): `wails3 update build-assets -name GoExplore -binaryname goexplore -config ./wails.json -dir build`
-5. Run the development server with live reload:
+4. Generate build assets once (if `build/Taskfile.yml` is missing): `wails3 update build-assets -name GoExplore -binaryname goexplore -config ./wails.json -dir build`
+5. App icon source: `frontend/src/assets/appicon.png` (copied to `build/appicon.png` for Wails packaging; CI regenerates `windows/icon.ico` from it).
+6. Run the development server with live reload:
    ```bash
    wails3 dev
    ```
-6. To compile a production binary, use:
+7. To compile a production binary, use:
    ```bash
    wails3 build
    ```
