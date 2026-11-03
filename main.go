@@ -21,29 +21,23 @@ var icon []byte
 var Version string = "dev"
 
 const (
-	linuxApplicationID  = "uk.co.jdbnet.goexplore"
-	linuxIconThemeName  = "uk.co.jdbnet.goexplore"
-	linuxIconLegacyName = "goexplore"
+	linuxApplicationID = "uk.co.jdbnet.goexplore"
+	linuxIconThemeName = "uk.co.jdbnet.goexplore"
 )
 
 func linuxIconPath(home string) string {
 	return filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", linuxIconThemeName+".png")
 }
 
+// installLinuxIcon writes the same PNG already embedded in the binary (see icon var)
+// to disk. Linux desktop shells do not read icons from inside the ELF; Wails on GTK4
+// also ignores Options.Icon for the window/taskbar. The .desktop Icon= path is required.
 func installLinuxIcon(home string) {
-	for _, size := range []string{"48x48", "128x128", "256x256"} {
-		dir := filepath.Join(home, ".local", "share", "icons", "hicolor", size, "apps")
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			continue
-		}
-		for _, name := range []string{linuxIconThemeName, linuxIconLegacyName} {
-			_ = os.WriteFile(filepath.Join(dir, name+".png"), icon, 0644)
-		}
+	dir := filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return
 	}
-	if cache, err := exec.LookPath("gtk-update-icon-cache"); err == nil {
-		hicolor := filepath.Join(home, ".local", "share", "icons", "hicolor")
-		_ = exec.Command(cache, "-f", "-t", hicolor).Run()
-	}
+	_ = os.WriteFile(linuxIconPath(home), icon, 0644)
 }
 
 func refreshLinuxDesktopDatabase(home string) {
@@ -51,28 +45,6 @@ func refreshLinuxDesktopDatabase(home string) {
 		appDir := filepath.Join(home, ".local", "share", "applications")
 		_ = exec.Command(upd, appDir).Run()
 	}
-}
-
-// Sidecar launcher for the release binary (e.g. ~/Downloads). KDE on Wayland does not
-// use hicolor icons for raw executables; it needs a .desktop with an absolute Icon path.
-func writePortableDesktop(sourceExe string) {
-	dir := filepath.Dir(sourceExe)
-	iconFile := filepath.Join(dir, "goexplore.png")
-	_ = os.WriteFile(iconFile, icon, 0644)
-	desktopPath := filepath.Join(dir, "GoExplore.desktop")
-	desktopContent := fmt.Sprintf(`[Desktop Entry]
-Version=1.0
-Type=Application
-Name=GoExplore
-Comment=File manager for local and remote storage
-Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 %s
-Icon=%s
-Terminal=false
-Categories=Utility;FileTools;
-StartupNotify=false
-StartupWMClass=%s
-`, sourceExe, iconFile, linuxApplicationID)
-	_ = os.WriteFile(desktopPath, []byte(desktopContent), 0644)
 }
 
 func installLinux() {
@@ -110,8 +82,6 @@ func installLinux() {
 		refreshLinuxDesktopDatabase(home)
 		return
 	}
-
-	writePortableDesktop(exe)
 
 	// Ensure target directories exist
 	os.MkdirAll(targetDir, 0755)
@@ -152,10 +122,9 @@ func writeDesktopEntry(home, targetExe string) {
 		return
 	}
 	iconPath := linuxIconPath(home)
-	// env= runs before the process starts. A menu launch otherwise inherits Plasma's
-	// NVIDIA explicit-sync setting, and WebKit's DMA-BUF renderer flashes black.
-	// GTK4 taskbar icons come from the .desktop file (absolute Icon= is most reliable
-	// on KDE) and StartupWMClass matching the Wayland app id, not Options.Icon.
+	// env= on Exec avoids Plasma/WebKit NVIDIA explicit-sync black flash on Wayland.
+	// Embedded icon (Options.Icon) is used on Windows/macOS. On Linux GTK4, Wails does
+	// not set a window icon from bytes; Plasma reads Icon= from this desktop entry.
 	desktopContent := fmt.Sprintf(`[Desktop Entry]
 Version=1.0
 Type=Application
