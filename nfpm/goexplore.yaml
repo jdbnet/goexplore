@@ -11,8 +11,8 @@ vendor: JDB-NET
 homepage: https://github.com/jdbnet/goexplore
 
 depends:
-  - libgtk-3-0
-  - libwebkit2gtk-4.1-0
+  - libgtk-4-1
+  - libwebkitgtk-6.0-4
 
 contents:
   - src: dist/nfpm-staging/goexplore
@@ -22,7 +22,14 @@ contents:
   - src: packaging/linux/goexplore.desktop
     dst: /usr/share/applications/goexplore.desktop
   - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/48x48/apps/goexplore.png
+  - src: build/appicon.png
     dst: /usr/share/icons/hicolor/128x128/apps/goexplore.png
+  - src: build/appicon.png
+    dst: /usr/share/icons/hicolor/256x256/apps/goexplore.png
+
+scripts:
+  postinstall: ./packaging/linux/postinstall.sh
 
 deb:
   compression: gzip

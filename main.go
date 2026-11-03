@@ -20,6 +20,25 @@ var icon []byte
 
 var Version string = "dev"
 
+const (
+	linuxApplicationID = "uk.co.jdbnet.goexplore"
+	linuxIconName      = "goexplore"
+)
+
+func installLinuxIcon(home string) {
+	for _, size := range []string{"48x48", "128x128", "256x256"} {
+		dir := filepath.Join(home, ".local", "share", "icons", "hicolor", size, "apps")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			continue
+		}
+		_ = os.WriteFile(filepath.Join(dir, linuxIconName+".png"), icon, 0644)
+	}
+	if cache, err := exec.LookPath("gtk-update-icon-cache"); err == nil {
+		hicolor := filepath.Join(home, ".local", "share", "icons", "hicolor")
+		_ = exec.Command(cache, "-f", "-t", hicolor).Run()
+	}
+}
+
 func installLinux() {
 	if runtime.GOOS != "linux" {
 		return
@@ -50,8 +69,8 @@ func installLinux() {
 
 	// Already installed. Refresh the menu entry so it keeps the WebKit workaround.
 	if exe == targetExe {
-		iconPath := filepath.Join(home, ".local", "share", "icons", "goexplore.png")
-		writeDesktopEntry(targetExe, iconPath)
+		installLinuxIcon(home)
+		writeDesktopEntry(targetExe)
 		return
 	}
 
@@ -64,13 +83,8 @@ func installLinux() {
 		os.WriteFile(targetExe, data, 0755)
 	}
 
-	// Write the application icon
-	iconDir := filepath.Join(home, ".local", "share", "icons")
-	os.MkdirAll(iconDir, 0755)
-	iconPath := filepath.Join(iconDir, "goexplore.png")
-	os.WriteFile(iconPath, icon, 0644)
-
-	writeDesktopEntry(targetExe, iconPath)
+	installLinuxIcon(home)
+	writeDesktopEntry(targetExe)
 
 	// Execute the newly installed binary and exit the current running process
 	cmd := exec.Command(targetExe)
@@ -92,7 +106,7 @@ func installedUnderUsr(exe string) bool {
 	return false
 }
 
-func writeDesktopEntry(targetExe, iconPath string) {
+func writeDesktopEntry(targetExe string) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return
@@ -103,6 +117,8 @@ func writeDesktopEntry(targetExe, iconPath string) {
 	}
 	// env= runs before the process starts. A menu launch otherwise inherits Plasma's
 	// NVIDIA explicit-sync setting, and WebKit's DMA-BUF renderer flashes black.
+	// GTK4 taskbar icons come from the .desktop Icon= theme name and StartupWMClass
+	// matching the Wayland app id (Options.Linux.ApplicationID), not Options.Icon.
 	desktopContent := fmt.Sprintf(`[Desktop Entry]
 Name=GoExplore
 Exec=env __NV_DISABLE_EXPLICIT_SYNC=1 %s
@@ -111,7 +127,8 @@ Type=Application
 Terminal=false
 Categories=Utility;FileTools;
 StartupNotify=false
-`, targetExe, iconPath)
+StartupWMClass=%s
+`, targetExe, linuxIconName, linuxApplicationID)
 	_ = os.WriteFile(filepath.Join(appDir, "goexplore.desktop"), []byte(desktopContent), 0644)
 }
 
@@ -148,8 +165,7 @@ func main() {
 			Handler: application.BundledAssetFileServer(assets),
 		},
 		Linux: application.LinuxOptions{
-			ProgramName:   "goexplore",
-			ApplicationID: "net.jdbnet.goexplore",
+			ApplicationID: linuxApplicationID,
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
