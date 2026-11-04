@@ -52,7 +52,7 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: bash scripts/ci-prepare.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend-build
           retention-days: 1
@@ -69,7 +69,7 @@ jobs:
           ref: v${{ needs.version.outputs.version }}
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: frontend-build
           path: frontend
@@ -84,7 +84,7 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: bash scripts/ci-build-linux.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-amd64
           retention-days: 1
@@ -101,7 +101,7 @@ jobs:
           ref: v${{ needs.version.outputs.version }}
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: frontend-build
           path: frontend
@@ -122,7 +122,7 @@ jobs:
           VERSION: ${{ needs.version.outputs.version }}
         run: bash scripts/ci-build-windows.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-amd64
           retention-days: 1
@@ -133,12 +133,12 @@ jobs:
     if: needs.version.outputs.version != ''
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: linux-amd64
           path: dist
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: windows-amd64
           path: dist
